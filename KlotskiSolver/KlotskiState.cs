@@ -105,7 +105,10 @@ namespace KlotskiSolverApplication
 
         public char tileAt(int row, int col)
         {
-            return _state[col+row*context.width];
+            if (row < 0 || row >= context.height || col < 0 || col >= context.width)
+                return '\0';
+
+            return _state[col + row * context.width];
         }
 
         public void setTileAt(int row, int col, char tileId)
@@ -283,14 +286,18 @@ namespace KlotskiSolverApplication
                         tileId = this.tileAt(row, col+1);
                         break;
                 }
+
+                if (tileId != '\0')
+                {
+                    return moveTile(tileId, direction);
+                }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-                //Console.WriteLine("Error: "+e);
-                return null;
+                Console.WriteLine("Error: " + e);
             }
 
-            return moveTile(tileId, direction);
+            return null;
         }
 
         // attempts to move a tile. robust: in the event of an invalid
