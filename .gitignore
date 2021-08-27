@@ -1,0 +1,14 @@
+# User-specific files
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+# Build output
+bin/
+obj/
+
+# Visual Studio cache
+.vs/
