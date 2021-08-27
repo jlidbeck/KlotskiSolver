@@ -10,30 +10,31 @@ namespace KlotskiSolverApplication
     {
         public const char EMPTY = ' ';
 
-        String _state;
-        String _isoState=null;
+        public String stateString { get; private set; } = null;
+        String _canonicalString = null;
 
 		// data structure
-        KlotskiProblemDefinition _context = null;
-		KlotskiState _parent = null;
+        public KlotskiProblemDefinition context { get; private set; } = null;
+		public KlotskiState parentState { get; private set; } = null;
 		List<KlotskiState> _children = null;
-        int _moveCount = 0;
-		char _movedPiece = '\0';
+
+        // piece move count. this can be less than {depth} because consecutive moves of the same tile are only counted once
+        public int moveCount { get; private set; } = 0;
+        
+		public char movedPiece { get; private set; } = '\0';
         public enum Direction { DOWN=1, RIGHT=2, UP=3, LEFT=4 };
-        Direction _movedPieceDirection;
+        public Direction movedPieceDirection { get; private set; }
 
         public KlotskiState(KlotskiProblemDefinition context, String sz)
         {
-            Debug.Assert(sz.Length == context.width * context.height);
-            _context = context;
-            _state = sz;
+            Trace.Assert(sz.Length == context.width * context.height,
+                        "Invalid state string: string length must be equal to width x height");
+            this.context = context;
+            stateString = sz;
         }
 
-        public KlotskiProblemDefinition context
-        {
-            get { return _context; }
-        }
-
+        //  Comparison override: true if states are identical (not just isomorphic)
+        //  Allows functionality such as Array.IndexOf, etc.
         public override bool Equals(object obj)
         {
             if (!(obj is KlotskiState))
@@ -41,30 +42,33 @@ namespace KlotskiSolverApplication
 
             KlotskiState state = obj as KlotskiState;
 
-            return (state._state.Equals(this._state));
+            return (state.stateString.Equals(this.stateString));
         }
 
+        //  Returns true if this state is equivalent to {state},
+        //  allowing for identical (same type) tiles to be exchanged
         public bool isIsomorphicTo(KlotskiState state)
         {
-            string sz1 = this.isoString;
-            string sz2 = state.isoString;
+            string sz1 = this.canonicalString;
+            string sz2 = state.canonicalString;
             return (sz1.Equals(sz2));
-
         }
 
-        public string isoString
+        //  Returns a canonical form for the state, with tile IDs replaced with tile type IDs,
+        //  for isomorphic state comparisons
+        public string canonicalString
         {
             get
             {
-                if(_isoState==null)
-                    _isoState = _context.isoMap(_state);
-                return _isoState;
+                if (_canonicalString == null)
+                    _canonicalString = context.getCanonicalStateString(stateString);
+                return _canonicalString;
             }
         }
 
 		public override int GetHashCode()
 		{
-			return _state.GetHashCode();
+			return stateString.GetHashCode();
 		}
 
         public override string ToString()
@@ -72,7 +76,7 @@ namespace KlotskiSolverApplication
             StringBuilder sz = new StringBuilder();
             for (int row = 0; row < context.height; ++row)
             {
-                sz.AppendLine(_state.Substring(row * context.width, context.width));
+                sz.AppendLine(stateString.Substring(row * context.width, context.width));
             }
             return sz.ToString();
         }
@@ -108,19 +112,24 @@ namespace KlotskiSolverApplication
             if (row < 0 || row >= context.height || col < 0 || col >= context.width)
                 return '\0';
 
-            return _state[col + row * context.width];
+            return stateString[col + row * context.width];
         }
 
-        public void setTileAt(int row, int col, char tileId)
+        private void setTileAt(int row, int col, char tileId)
         {
-            int i =col+row*context.width;
-            _state=_state.Substring(0,i)+tileId+_state.Substring(i+1);
-            _isoState = null;
+            var sz = stateString.ToCharArray();
+            int i = col + row * context.width;
+            sz[i] = tileId;
+            stateString = new string(sz);
+
+            // state has changed, canonical string is now stale, so invalidate it
+            _canonicalString = null;
+            _children = null;
         }
 
         protected KlotskiState clone()
         {
-            return new KlotskiState(_context, _state);
+            return new KlotskiState(context, stateString);
         }
 
         //
@@ -164,10 +173,11 @@ namespace KlotskiSolverApplication
             return a;
         }
 
-        // returns list of all possible states after one move
+        //  Returns list of all reachable states one move away.
+        //  States are unique: all returned states are non-isomorphic to each other, as well as to all historical states.
         public List<KlotskiState> getChildStates()
         {
-			if (_children!=null)
+			if (_children != null)
 				return _children;
 
             _children = new List<KlotskiState>();
@@ -197,35 +207,31 @@ namespace KlotskiSolverApplication
          *  - child is null
          *  - child is duplicate of direct ancestor
          *  - child is duplicate of another element in _children
+         *  where isomorphic states are considered duplicates.
          **/
-		private void addChildIfNotBacktrack(KlotskiState child)
-		{
-			if (child==null)
-				return;
+        private void addChildIfNotBacktrack(KlotskiState child)
+        {
+            if (child == null)
+                return;
 
             if (_children.IndexOf(child) >= 0)
                 return;
 
-			KlotskiState p = _parent;
-			while (p!=null)
-			{
-				//if (p.Equals(child))
-                if(p.isIsomorphicTo(child))
-					return;
-				p = p._parent;
-			}
+            KlotskiState p = parentState;
+            while (p != null)
+            {
+                //if (p.Equals(child))
+                if (p.isIsomorphicTo(child))
+                    return;
+                p = p.parentState;
+            }
 
-            child._moveCount = this._moveCount;
+            child.moveCount = this.moveCount;
             if (child.movedPiece != this.movedPiece)
-                ++child._moveCount;
+                ++child.moveCount;
 
-			child._parent = this;
-			_children.Add(child);
-		}
-
-        public KlotskiState parent
-        {
-            get { return _parent; }
+            child.parentState = this;
+            _children.Add(child);
         }
 
 		public int depth
@@ -233,57 +239,39 @@ namespace KlotskiSolverApplication
 			get
 			{
 				int d = 0;
-				KlotskiState p = this._parent;
+				KlotskiState p = this.parentState;
 				while (p != null)
 				{
 					++d;
-					p = p._parent;
+					p = p.parentState;
 				}
 				return d;
 			}
 		}
 
-        public int moveCount
-        {
-            get
-            {
-                return _moveCount;
-            }
-        }
-
-        public char movedPiece
-        {
-            get { return _movedPiece; }
-        }
-
-        public Direction movedPieceDirection
-        {
-            get { return _movedPieceDirection; }
-        }
-
         private void replaceTile(string tileId, string newId)
         {
-            _state.Replace(tileId, newId);
+            stateString.Replace(tileId, newId);
         }
 
         public KlotskiState moveTileInto(int row, int col, Direction direction)
         {
-            char tileId='\0';
+            char tileId = '\0';
             try
             {
                 switch (direction)
                 {
                     case Direction.DOWN:
-                        tileId = this.tileAt(row-1, col);
+                        tileId = this.tileAt(row - 1, col);
                         break;
                     case Direction.RIGHT:
-                        tileId = this.tileAt(row, col-1);
+                        tileId = this.tileAt(row, col - 1);
                         break;
                     case Direction.UP:
-                        tileId = this.tileAt(row+1, col);
+                        tileId = this.tileAt(row + 1, col);
                         break;
                     case Direction.LEFT:
-                        tileId = this.tileAt(row, col+1);
+                        tileId = this.tileAt(row, col + 1);
                         break;
                 }
 
@@ -304,7 +292,7 @@ namespace KlotskiSolverApplication
         // tile id, or impossible move, returns null
         protected KlotskiState moveTile(char tileId, Direction direction)
         {
-            if (!((tileId >= '0' && tileId <= '9') 
+            if (!( (tileId >= '0' && tileId <= '9') 
                 || (tileId >= 'A' && tileId <= 'Z') 
                 || (tileId >= 'a' && tileId <= 'z')))
                 return null;
@@ -408,8 +396,8 @@ namespace KlotskiSolverApplication
 			//if (tileId == '1' && (direction == LEFT || direction == RIGHT))
 			//	Console.WriteLine("moved tile 1: "+direction);
 
-			newstate._movedPiece = tileId;
-            newstate._movedPieceDirection = direction;
+			newstate.movedPiece = tileId;
+            newstate.movedPieceDirection = direction;
 			return newstate;
         }
 

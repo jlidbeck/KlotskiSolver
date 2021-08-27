@@ -19,8 +19,8 @@ namespace KlotskiSolverApplication
 
             int depth = 130;
 
-            if(args.Length>=2)
-                depth= int.Parse(args[1]);
+            if (args.Length >= 2)
+                depth = int.Parse(args[1]);
 
             Console.WriteLine("Got problem. Start state:\n\n" + pd.startState.ToString());
 
@@ -43,7 +43,7 @@ namespace KlotskiSolverApplication
             {
                 state.write();
 
-                if (pd.isSolution(state))
+                if (pd.matchesGoalState(state))
                 {
                     Console.WriteLine("**********************************");
                     Console.WriteLine("Solution found: " + state.moveCount + " moves");
@@ -78,7 +78,7 @@ namespace KlotskiSolverApplication
 
                 if (key.Key == ConsoleKey.Backspace)
                 {
-                    if ((key.Modifiers & ConsoleModifiers.Shift)!=0)
+                    if ((key.Modifiers & ConsoleModifiers.Shift) != 0)
                     {
                         // retrack
                         int n = history.IndexOf(state);
@@ -90,8 +90,10 @@ namespace KlotskiSolverApplication
                     else
                     {
                         // backtrack
-                        if (state.parent != null)
-                            state = state.parent;
+                        if (state.parentState != null)
+                        {
+                            state = state.parentState;
+                        }
                         else
                         {
                             int n = history.IndexOf(state);
@@ -100,7 +102,6 @@ namespace KlotskiSolverApplication
                                 state = history[n - 1];
                             }
                         }
-
                     }
                 }
                 else if (key.Key == ConsoleKey.Enter)
@@ -119,18 +120,20 @@ namespace KlotskiSolverApplication
                         state = searchResult;
 
                         // add search history to UI history
-                        int n=history.Count()-1;
+                        int n = history.Count() - 1;
                         KlotskiState p = searchResult;
-                        while (p!=null && p != history[n])
+                        while (p != null && p != history[n])
                         {
-                            history.Insert(n+1, p);
+                            history.Insert(n + 1, p);
 
-                            p = p.parent;
+                            p = p.parentState;
                         }
                     }
                 }
                 else
                 {
+                    // If the char typed matches one of the piece IDs which can be moved,
+                    // make the first move available for that piece.
                     for (int j = 0; j < children.Count(); ++j)
                     {
                         if (char.ToLower(key.KeyChar) == char.ToLower(children[j].movedPiece))
@@ -140,8 +143,10 @@ namespace KlotskiSolverApplication
                         }
                     }
 
-                    if(nextState==null)
+                    if (nextState == null)
                     {
+                        // typed char didn't match a piece ID.
+                        // check whether user entered a digit
                         int index = -1;
                         try
                         {
@@ -150,9 +155,9 @@ namespace KlotskiSolverApplication
                         catch (FormatException)
                         { }
 
-                        if(index>=1 && index<=children.Count())
+                        if (index >= 1 && index <= children.Count())
                         {
-                            nextState=children[index-1];
+                            nextState = children[index - 1];
                         }
                     }
 
@@ -162,7 +167,7 @@ namespace KlotskiSolverApplication
                         history.Add(nextState);
                     }
                 }
-            }
+            }   // while(true)
 
         }
 
