@@ -108,10 +108,16 @@ namespace KlotskiSolverApplication
                 else if (key.Key == ConsoleKey.Enter)
                 {
                     //autoSearch = true;
-                    Console.WriteLine("\nBeginning auto search");
+                    Console.WriteLine("\nBeginning auto search from move " + history.Count);
+
+                    var stopwatch = System.Diagnostics.Stopwatch.StartNew();
                     KlotskiState searchResult = pd.search(history, 130);
-                    if (searchResult!=null)
+                    stopwatch.Stop();
+
+                    if (searchResult != null)
                     {
+                        Console.WriteLine("Search time: " + stopwatch.Elapsed);
+
                         state = searchResult;
 
                         // add search history to UI history
