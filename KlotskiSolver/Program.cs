@@ -72,36 +72,60 @@ namespace KlotskiSolverApplication
                 }
 
                 Console.WriteLine(prompt);
-                Console.Write("BACK to backtrack, ENTER to search: ");
+                Console.Write("Ctrl+Z to backtrack, Ctrl+Y to retrack, ENTER to search: ");
                 ConsoleKeyInfo key = Console.ReadKey();
                 Console.WriteLine();
 
-                if (key.Key == ConsoleKey.Backspace)
+                if (key.Key == ConsoleKey.Escape)
                 {
-                    if ((key.Modifiers & ConsoleModifiers.Shift) != 0)
+                    return;
+                }
+                else if (key.KeyChar == '?')
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("    1-9:      Apply move. Only unique moves are listed--those that do not repeat a previous state.");
+                    Console.WriteLine("    a-z, A-Z: Move specified tile if there is a unique move. If multiple moves are listed, first move is made.");
+                    Console.WriteLine("    Ctrl+Z:   Backtrack");
+                    Console.WriteLine("    Ctrl+Y:   Retrack");
+                    Console.WriteLine("    HOME:     Rewind to start state");
+                    Console.WriteLine("    END:      Forward to last state");
+                    Console.WriteLine("    ENTER:    Search from current state");
+                    Console.WriteLine("    ESC:      Exit");
+                    Console.WriteLine();
+                }
+                else if (key.Key == ConsoleKey.Home)
+                {
+                    state = history[0];
+                }
+                else if (key.Key == ConsoleKey.End)
+                {
+                    state = history.Last();
+                }
+                else if ((key.Key == ConsoleKey.Backspace && (key.Modifiers & ConsoleModifiers.Shift  ) == 0) ||
+                         (key.Key == ConsoleKey.Z         && (key.Modifiers & ConsoleModifiers.Control) != 0))
+                {
+                    // Ctrl+Z or backspace: backtrack
+                    if (state.parentState != null)
                     {
-                        // retrack
-                        int n = history.IndexOf(state);
-                        if (n >= 0 && n < history.Count() - 1)
-                        {
-                            state = history[n + 1];
-                        }
+                        state = state.parentState;
                     }
                     else
                     {
-                        // backtrack
-                        if (state.parentState != null)
+                        int n = history.IndexOf(state);
+                        if (n > 0)
                         {
-                            state = state.parentState;
+                            state = history[n - 1];
                         }
-                        else
-                        {
-                            int n = history.IndexOf(state);
-                            if (n > 0)
-                            {
-                                state = history[n - 1];
-                            }
-                        }
+                    }
+                }
+                else if (key.Key == ConsoleKey.Backspace && (key.Modifiers & ConsoleModifiers.Shift) != 0 ||
+                         key.Key == ConsoleKey.Y && (key.Modifiers & ConsoleModifiers.Control) != 0)
+                {
+                    // Ctrl+Y or shift+Back: retrack
+                    int n = history.IndexOf(state);
+                    if (n >= 0 && n < history.Count() - 1)
+                    {
+                        state = history[n + 1];
                     }
                 }
                 else if (key.Key == ConsoleKey.Enter)
