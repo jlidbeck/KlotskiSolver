@@ -83,7 +83,29 @@ namespace KlotskiSolverApplication
 
         public void write()
         {
-            Console.ForegroundColor = ConsoleColor.White;
+            var colors = new ConsoleColor[15] {
+                ConsoleColor.White,
+                ConsoleColor.Yellow,
+                ConsoleColor.Magenta,
+                ConsoleColor.Red,
+                ConsoleColor.Cyan,
+                ConsoleColor.Green,
+                ConsoleColor.Blue,
+                ConsoleColor.DarkGray,
+                ConsoleColor.Gray,
+                ConsoleColor.DarkYellow,
+                ConsoleColor.DarkMagenta,
+                ConsoleColor.DarkRed,
+                ConsoleColor.DarkCyan,
+                ConsoleColor.DarkGreen,
+                ConsoleColor.DarkBlue
+                };
+
+            Console.ForegroundColor = ConsoleColor.Black;
+
+            // only print each tile ID char once
+            var tileIdsPrinted = new HashSet<char>();
+
             for (int row = 0; row < context.height; ++row)
             {
                 Console.BackgroundColor = ConsoleColor.Black;
@@ -92,19 +114,31 @@ namespace KlotskiSolverApplication
                 {
                     char tileId = this.tileAt(row, col);
                     ConsoleColor color = ConsoleColor.Black;
-                    if(tileId>='a' && tileId<='z')
-                        color = (ConsoleColor)(int)((tileId - 'a') % 8);
+                    if (tileId >= 'a' && tileId <= 'z')
+                        color = colors[(tileId - 'a') % 15];
                     else if (tileId >= 'A' && tileId <= 'Z')
-                        color = (ConsoleColor)(int)((tileId - 'A') % 8);
+                        color = colors[(tileId - 'A') % 15];
                     else if (tileId >= '0' && tileId <= '9')
-                        color = (ConsoleColor)(int)((tileId - '0') % 8);
+                        color = colors[(tileId - '0') % 15];
                     Console.BackgroundColor = color;
-                    Console.Write(tileId);
+                    if (tileIdsPrinted.Contains(tileId))
+                    {
+                        Console.Write("  ");
+                    }
+                    else
+                    {
+                        tileIdsPrinted.Add(tileId);
+                        Console.Write(tileId);
+                        Console.Write(' ');
+                    }
                 }
                 Console.BackgroundColor = ConsoleColor.Black;
                 Console.WriteLine();
             }
+
             Console.BackgroundColor = ConsoleColor.Black;
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.WriteLine("Depth: " + depth + " Moves: " + moveCount);
         }
 
         public char tileAt(int row, int col)
