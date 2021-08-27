@@ -24,8 +24,6 @@ namespace KlotskiSolverApplication
 
             Console.WriteLine("Got problem. Start state:\n\n" + pd.startState.ToString());
 
-            List<KlotskiState> a=null;
-
             solve(pd);
 
             Console.WriteLine("Hit ENTER");
@@ -149,7 +147,7 @@ namespace KlotskiSolverApplication
                         {
                             index = int.Parse(key.KeyChar.ToString());
                         }
-                        catch (FormatException e)
+                        catch (FormatException)
                         { }
 
                         if(index>=1 && index<=children.Count())
