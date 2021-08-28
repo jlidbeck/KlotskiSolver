@@ -128,6 +128,21 @@ namespace KlotskiSolverApplication
                         state = history[n + 1];
                     }
                 }
+                else if (key.Key == ConsoleKey.F2)
+                {
+                    // print a concise history of moved tiles
+                    char tileId = '\0';
+                    Console.Write("History: ");
+                    for (int i = 0; i < history.Count; ++i)
+                    {
+                        if (history[i].movedPiece != tileId)
+                        {
+                            tileId = history[i].movedPiece;
+                            Console.Write(tileId);
+                        }
+                    }
+                    Console.WriteLine();
+                }
                 else if (key.Key == ConsoleKey.Enter)
                 {
                     //autoSearch = true;
