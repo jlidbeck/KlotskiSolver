@@ -98,14 +98,25 @@ namespace KlotskiSolverApplication
 
         static void solve(KlotskiProblemDefinition pd)
         {
-            // randomly move pieces until no move can be made without backtracking
             Random rand = new Random();
-            KlotskiState state = pd.startState;
-            List<KlotskiState> history = new List<KlotskiState>();
-            history.Add(pd.startState);
+
+            var state = pd.startState;                  // current state displayed in the UI
+            var history = new List<KlotskiState>();     // list of consecutive states beginning with problem definition's startState
+
+            bool restartNeeded = true;
 
             while (true)
             {
+                if (restartNeeded)
+                {
+                    // clear history back to start state
+                    state = pd.startState;
+                    history = new List<KlotskiState>();
+                    history.Add(pd.startState);
+
+                    restartNeeded = false;
+                }
+
                 state.write();
 
                 if (pd.matchesGoalState(state))
@@ -149,13 +160,16 @@ namespace KlotskiSolverApplication
                     Console.WriteLine("    a-z, A-Z: Move specified tile if there is a unique move. If multiple moves are listed, first move is made.");
                     Console.WriteLine("    Ctrl+Z:   Backtrack");
                     Console.WriteLine("    Ctrl+Y:   Retrack");
-                    Console.WriteLine("    HOME:     Rewind to start state");
+                    Console.WriteLine("    HOME:     Rewind to start state, preserving history");
                     Console.WriteLine("    END:      Forward to last state");
                     Console.WriteLine("    ENTER:    Search from current state");
+                    Console.WriteLine("    F2:       Display history");
+                    Console.WriteLine("    F5:       Restart this puzzle");
+                    Console.WriteLine("    Ctrl+O:   Open puzzle menu");
                     Console.WriteLine("    ESC:      Exit");
                     Console.WriteLine();
                 }
-                else if(key.Key == ConsoleKey.O && (key.Modifiers & ConsoleModifiers.Control) != 0)
+                else if (key.Key == ConsoleKey.O && (key.Modifiers & ConsoleModifiers.Control) != 0)
                 {
                     return;
                 }
@@ -167,8 +181,8 @@ namespace KlotskiSolverApplication
                 {
                     state = history.Last();
                 }
-                else if ((key.Key == ConsoleKey.Backspace && (key.Modifiers & ConsoleModifiers.Shift  ) == 0) ||
-                         (key.Key == ConsoleKey.Z         && (key.Modifiers & ConsoleModifiers.Control) != 0))
+                else if ((key.Key == ConsoleKey.Backspace && (key.Modifiers & ConsoleModifiers.Shift) == 0) ||
+                         (key.Key == ConsoleKey.Z && (key.Modifiers & ConsoleModifiers.Control) != 0))
                 {
                     // Ctrl+Z or backspace: backtrack
                     if (state.parentState != null)
@@ -208,6 +222,10 @@ namespace KlotskiSolverApplication
                         }
                     }
                     Console.WriteLine();
+                }
+                else if (key.Key == ConsoleKey.F5)
+                {
+                    restartNeeded = true;
                 }
                 else if (key.Key == ConsoleKey.Enter)
                 {
