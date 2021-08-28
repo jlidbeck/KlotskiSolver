@@ -7,27 +7,93 @@ namespace KlotskiSolverApplication
 {
     class Program
     {
+        static readonly Dictionary<string, KlotskiProblemDefinition> puzzlePresets = new Dictionary<string, KlotskiProblemDefinition>();
+
+
         static void Main(string[] args)
         {
-            //KlotskiState start = new KlotskiState(4, 5, "bAAcbAAcdeefdghfi  j");
-            //KlotskiState solution = new KlotskiState(4, 5, "             AA  AA ");
-            KlotskiProblemDefinition pd = new KlotskiProblemDefinition(
+            puzzlePresets["Forget-me-not"] = new KlotskiProblemDefinition(
                 4, 5, 
                 "bAAcbAAcdeefdghfi  j", 
                 "             AA  AA ",
-                "A4b2c2d2e3f2g1h1i1j1");
+                "A4b2c2d2e3f2g1h1i1j1",
+                81);
+
+            puzzlePresets["2.1"] = new KlotskiProblemDefinition(
+                4, 5,
+                "AbbcAAbcddeefg  hi  ",
+                "              A   AA",
+                "A1B2c3d4e4f5g5h5i5",
+                12);
+
+            puzzlePresets["2.11 Breakthrough"] = new KlotskiProblemDefinition(
+                5, 6,
+                " AAA   A   def BBICCBjIkCBBmCC",
+                "                     AAA   A  ",
+                "A1B2C3I4d5e5f5j5k5m5",
+                28);
+
+            puzzlePresets["2.13"] = new KlotskiProblemDefinition(
+                5, 6,
+                "bAAAfjjAgfhkkgchllmmd   inn ei",
+                "                     AAA   A  ",
+                "A1b2c2d2e2f3g3h3i3j4k4l4m4",
+                30);
+
+            puzzlePresets["Trivial"] = new KlotskiProblemDefinition(
+                5, 6,
+                "AA   AA                       ",
+                "                       AA   AA",
+                "",
+                1);
 
             int depth = 130;
 
             if (args.Length >= 2)
                 depth = int.Parse(args[1]);
 
-            Console.WriteLine("Got problem. Start state:\n\n" + pd.startState.ToString());
+            int selectedIndex = 1;
 
-            solve(pd);
+            while (true)
+            {
+                if (selectedIndex < 0)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("Select a puzzle:");
+                    for (int i = 0; i < puzzlePresets.Count(); ++i)
+                    {
+                        var preset = puzzlePresets.ElementAt(i);
+                        Console.WriteLine($"    {i}: {preset.Key.PadRight(25, ' ')} Goal: {preset.Value.goalMoves}");
+                    }
+                    Console.Write(">");
 
-            Console.WriteLine("Hit ENTER");
-            Console.ReadLine();
+                    string input = Console.ReadLine();
+                    if (!int.TryParse(input, out selectedIndex) || selectedIndex >= puzzlePresets.Count())
+                    {
+                        return;
+                    }
+                }
+
+                var pd = puzzlePresets.ElementAt(selectedIndex);
+
+                Console.WriteLine();
+                Console.WriteLine(pd.Key);
+                Console.WriteLine();
+                Console.WriteLine("    Start         Goal");
+                Console.WriteLine();
+                var startStateStrings = pd.Value.startState.ToStrings();
+                var goalStateStrings = pd.Value.goalState.ToStrings();
+                for (int i = 0; i < startStateStrings.Count; ++i)
+                {
+                    Console.WriteLine("    " + startStateStrings[i] + "   ==>   " + goalStateStrings[i]);
+                }
+                Console.WriteLine();
+
+                solve(pd.Value);
+
+                // how did we get back here? prompt to start a new puzzle
+                selectedIndex = -1;
+            }   // while(true)
         }
 
         static void solve(KlotskiProblemDefinition pd)
@@ -38,21 +104,17 @@ namespace KlotskiSolverApplication
             List<KlotskiState> history = new List<KlotskiState>();
             history.Add(pd.startState);
 
-            //for (int i = 0; i < 99999; ++i)
             while (true)
             {
                 state.write();
 
                 if (pd.matchesGoalState(state))
                 {
-                    Console.WriteLine("**********************************");
-                    Console.WriteLine("Solution found: " + state.moveCount + " moves");
-                    Console.WriteLine("**********************************");
+                    Console.WriteLine("***********  Goal  ***********");
                 }
 
                 // choose a move
 
-                //Console.WriteLine("Moves: " + i + "\n" + state.ToString());
                 List<KlotskiState> children = state.getChildStates();
 
                 // manual/interactive
@@ -78,7 +140,7 @@ namespace KlotskiSolverApplication
 
                 if (key.Key == ConsoleKey.Escape)
                 {
-                    return;
+                    System.Environment.Exit(0);
                 }
                 else if (key.KeyChar == '?')
                 {
@@ -92,6 +154,10 @@ namespace KlotskiSolverApplication
                     Console.WriteLine("    ENTER:    Search from current state");
                     Console.WriteLine("    ESC:      Exit");
                     Console.WriteLine();
+                }
+                else if(key.Key == ConsoleKey.O && (key.Modifiers & ConsoleModifiers.Control) != 0)
+                {
+                    return;
                 }
                 else if (key.Key == ConsoleKey.Home)
                 {

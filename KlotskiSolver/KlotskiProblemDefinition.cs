@@ -15,11 +15,13 @@ namespace KlotskiSolverApplication
         public KlotskiState startState { get; private set; }
         public string tileIdToTypeMap { get; private set; }         // String representing mapping from each tile ID to its shape type
 
+        public int goalMoves { get; private set; } = 100;
+
         //  Initializes a problem definition.
         //  Start and goal states are provided as strings representing a 2D array containing tile ID char values and spaces.
         //  tileIdToTypeMap is a string interpreted as char pairs mapping tile IDs (typically alpha chars)
         //  to tile types (typically digits).
-        public KlotskiProblemDefinition(int width, int height, string szStart, string szSolution, string tileIdToTypeMap)
+        public KlotskiProblemDefinition(int width, int height, string szStart, string szSolution, string tileIdToTypeMap, int goalMoves)
         {
             Trace.Assert(width > 0 && height > 0, "Invalid problem definition size");
 
@@ -28,6 +30,7 @@ namespace KlotskiSolverApplication
             this.tileIdToTypeMap = tileIdToTypeMap;
             this.goalState = new KlotskiState(this, szSolution);
             this.startState = new KlotskiState(this, szStart);
+            this.goalMoves = goalMoves;
         }
 
         //  Determine whether {state} satisfies {goalState}, that is,

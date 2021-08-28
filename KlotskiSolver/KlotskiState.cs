@@ -21,16 +21,31 @@ namespace KlotskiSolverApplication
         // piece move count. this can be less than {depth} because consecutive moves of the same tile are only counted once
         public int moveCount { get; private set; } = 0;
         
+        // data describing the move transforming parent state to this state
 		public char movedPiece { get; private set; } = '\0';
         public enum Direction { DOWN=1, RIGHT=2, UP=3, LEFT=4 };
         public Direction movedPieceDirection { get; private set; }
 
-        public KlotskiState(KlotskiProblemDefinition context, String sz)
+
+        public KlotskiState(KlotskiProblemDefinition context, String stateString)
         {
-            Trace.Assert(sz.Length == context.width * context.height,
+            Trace.Assert(stateString.Length == context.width * context.height,
                         "Invalid state string: string length must be equal to width x height");
             this.context = context;
-            stateString = sz;
+            this.stateString = stateString;
+        }
+
+        protected KlotskiState clone()
+        {
+            return new KlotskiState(context, stateString);
+        }
+
+
+        #region Comparison
+
+        public override int GetHashCode()
+        {
+            return stateString.GetHashCode();
         }
 
         //  Comparison override: true if states are identical (not just isomorphic)
@@ -66,10 +81,9 @@ namespace KlotskiSolverApplication
             }
         }
 
-		public override int GetHashCode()
-		{
-			return stateString.GetHashCode();
-		}
+        #endregion
+
+        #region serialization
 
         public override string ToString()
         {
@@ -79,6 +93,16 @@ namespace KlotskiSolverApplication
                 sz.AppendLine(stateString.Substring(row * context.width, context.width));
             }
             return sz.ToString();
+        }
+
+        public List<string> ToStrings()
+        {
+            var asz = new List<string>();
+            for (int row = 0; row < context.height; ++row)
+            {
+                asz.Add(stateString.Substring(row * context.width, context.width));
+            }
+            return asz;
         }
 
         public void write()
@@ -138,8 +162,10 @@ namespace KlotskiSolverApplication
 
             Console.BackgroundColor = ConsoleColor.Black;
             Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine("Depth: " + depth + " Moves: " + moveCount);
+            Console.WriteLine($"Depth: {moveCount} / {depth}");
         }
+
+        #endregion
 
         public char tileAt(int row, int col)
         {
@@ -161,14 +187,9 @@ namespace KlotskiSolverApplication
             _children = null;
         }
 
-        protected KlotskiState clone()
-        {
-            return new KlotskiState(context, stateString);
-        }
-
         //
 
-		public int countPossibleConfigurations(int maxMoves)
+		public int countReachableStates(int maxMoves)
 		{
 			int count = 1;
 			if (maxMoves > 0)
@@ -176,35 +197,35 @@ namespace KlotskiSolverApplication
 				List<KlotskiState> children = this.getChildStates();
 				foreach (KlotskiState state in children)
 				{
-					count += state.countPossibleConfigurations(maxMoves - 1);
+					count += state.countReachableStates(maxMoves - 1);
 				}
 			}
 			return count;
 		}
 
-        public List<KlotskiState> getPossibleConfigurations(int maxMoves)
+        public List<KlotskiState> findUniqueReachableStates(int maxMoves)
         {
-            List<KlotskiState> a = new List<KlotskiState>();
-            a.Add(this);
+            var states = new List<KlotskiState>();
+            states.Add(this);
 
-            int i=0;
-            while(maxMoves>0 && i<a.Count)
+            int i = 0;
+            while (maxMoves > 0 && i < states.Count)
             {
                 // grab next item in queue
-                KlotskiState state=a[i];
+                KlotskiState state = states[i];
                 ++i;
 
-                List<KlotskiState> a2=state.getChildStates();
-                foreach(KlotskiState newstate in a2)
+                List<KlotskiState> a2 = state.getChildStates();
+                foreach (KlotskiState newstate in a2)
                 {
-                    if(a.IndexOf(newstate)<0)
-                        a.Add(newstate);
+                    if (states.IndexOf(newstate) < 0)
+                        states.Add(newstate);
                 }
 
                 --maxMoves;
             }
 
-            return a;
+            return states;
         }
 
         //  Returns list of all reachable states one move away.
