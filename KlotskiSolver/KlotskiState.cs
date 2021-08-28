@@ -167,6 +167,19 @@ namespace KlotskiSolverApplication
 
         #endregion
 
+        //  Determine whether this state satisfies {goalState}, that is,
+        //  all non-blank values in {goalStateString} match values in this.stateString.
+        public bool matchesGoalState(KlotskiState goalState)
+        {
+            for (int i = 0; i < goalState.stateString.Length; ++i)
+            {
+                if (goalState.stateString[i] != ' ' && this.stateString[i] != goalState.stateString[i])
+                    return false;
+            }
+
+            return true;
+        }
+
         public char tileAt(int row, int col)
         {
             if (row < 0 || row >= context.height || col < 0 || col >= context.width)

@@ -119,7 +119,7 @@ namespace KlotskiSolverApplication
 
                 state.write();
 
-                if (pd.matchesGoalState(state))
+                if (state.matchesGoalState(pd.goalState))
                 {
                     Console.WriteLine("***********  Goal  ***********");
                 }

@@ -33,18 +33,6 @@ namespace KlotskiSolverApplication
             this.goalMoves = goalMoves;
         }
 
-        //  Determine whether {state} satisfies {goalState}, that is,
-        //  tile IDs match all non-blank values in {goalState}
-        public bool matchesGoalState(KlotskiState state)
-        {
-            for (int i = 0; i < goalState.stateString.Length; ++i)
-            {
-                if (goalState.stateString[i] != ' ' && state.stateString[i] != goalState.stateString[i])
-                    return false;
-            }
-            return true;
-        }
-
         //  Generates canonical version of {state} with tile IDs replaced with type IDs
         public string getCanonicalStateString(string state)
         {
@@ -110,7 +98,7 @@ namespace KlotskiSolverApplication
                 }
 
 
-                if (this.matchesGoalState(state))
+                if (state.matchesGoalState(this.goalState))
                 {
                     return state;
                 }
