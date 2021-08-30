@@ -63,92 +63,113 @@ namespace KlotskiSolverApplication
         {
             // init search
 
-            // keep track of state signatures for all states in both history and queue,
+            // keep track of canonical state strings for all states in search history
             // so that the same state is never searched twice.
-            // this avoids loops and backtracking as well as searching multiple paths to the same state
-            var visitedStates = new HashSet<string>();
+            // this avoids loops and backtracking as well as searching suboptimal paths to the same state
 
-            // search queue for width-first-search
-            var searchQueue = new Queue<KlotskiState>();
+            var visitedStates = new Dictionary<string, KlotskiState>();
 
-            foreach (KlotskiState st in history)
+            // if a history was provided, add all previous states to the visited set
+            // not including the last state, which will be the start state for the search.
+            for(int i=0; i<history.Count()-1; ++i)
             {
-                visitedStates.Add(st.canonicalString);
+                var st = history[i];
+                visitedStates[st.canonicalString] = st;
             }
 
-            // starting state for search
-            searchQueue.Enqueue(history[history.Count() - 1]);
+            // search queue for width-first-search
+            var searchQueue = new MS.Internal.PriorityQueue<KlotskiState>(0, new KlotskiState.MoveCountComparer());
 
-            Random rand = new Random();
+            // starting state for search
+            searchQueue.Push(history.Last());
+
+            //Random rand = new Random();
             int maxDepth = history.Count() + depth;
 
             // for console reporting: report each time a new depth is reached
             int lastReportedDepth = -1;
 
-            while (searchQueue.Count()>0)
+            int pruneCount = 0;
+            int superCount = 0;
+
+            while (searchQueue.Count > 0)
             {
                 // take one off the queue
-                KlotskiState state = searchQueue.Dequeue();
+                KlotskiState state = searchQueue.Top;
+                searchQueue.Pop();
 
                 // output
                 if (state.depth > lastReportedDepth)
                 {
                     lastReportedDepth = state.depth;
-                    Console.WriteLine("Depth:"+state.depth+" Queue:" + searchQueue.Count() + " Unique:" + visitedStates.Count());
+                    if (searchQueue.Count > 0)
+                    {
+                        Console.WriteLine($"Depth: {state.moveCount} / {state.depth} Queue:{searchQueue.Count} Visited:{visitedStates.Count()} ...");// + searchQueue.moveCount);
+                    }
                 }
-
 
                 if (state.matchesGoalState(this.goalState))
                 {
                     return state;
                 }
-                else
+
+                if (state.depth > maxDepth)
                 {
-                    if (state.depth < maxDepth)
+                    continue;
+                }
+
+                // if we have already visited this state:
+                if (visitedStates.ContainsKey(state.canonicalString))
+                {
+                    // we already know that, due to the ordering of the priority queue,
+                    // this child state must have at least as many moves to get there,
+                    // so we don't need to add this one to the search queue.
+
+                    if (state.moveCount >= visitedStates[state.canonicalString].moveCount)
                     {
-                        List<KlotskiState> children = state.getChildStates();
+                        string sz = $"{state.getHistoryString()} longer than {visitedStates[state.canonicalString].getHistoryString()}";
+                        ++pruneCount;
+                        continue;
+                    }
 
-                        if (children.Count() > 0)
+                    // found a shorter path? how is that possible?
+                    ++superCount;
+                    Console.WriteLine("what the hell?");
+                }
+
+                visitedStates[state.canonicalString] = state;
+
+                List<KlotskiState> children = state.getChildStates();
+
+                // add all children to queue, in some order,
+                // skipping states isomorphic to states in history or in the queue
+                foreach (var childState in children)
+                {
+                    string isoString = childState.canonicalString;
+
+                    // if we have already visited this state:
+                    if (visitedStates.ContainsKey(isoString))
+                    {
+                        // we already know that, due to the ordering of the priority queue,
+                        // this child state must have at least as many moves to get there,
+                        // so we don't need to add this one to the search queue.
+
+                        if (childState.moveCount >= visitedStates[isoString].moveCount)
                         {
-                            // add all children to queue, in some order,
-                            // skipping states isomorphic to states in history or in the queue
-
-                            // first priority: find children that move the same piece
-                            // just moved
-                            for (int k = 0; k < children.Count(); ++k)
-                            {
-                                if (children[k].movedPiece == state.movedPiece)
-                                {
-                                    string isoString = children[k].canonicalString;
-                                    if (!visitedStates.Contains(isoString))
-                                    {
-                                        searchQueue.Enqueue(children[k]);
-                                        visitedStates.Add(isoString);
-                                    }
-                                }
-                            }
-
-                            // now add all the rest of the child states which have not been added
-                            // and are not duplicates or repeats
-                            // they are added in a semi-random order.
-                            // todo: use heuristic
-                            int j = rand.Next() % children.Count();
-                            for (int m = 0; m < children.Count(); ++m)
-                            {
-                                int k = (j + m) % children.Count();
-
-                                string isoString = children[k].canonicalString;
-                                if (!visitedStates.Contains(isoString))
-                                {
-                                    searchQueue.Enqueue(children[k]);
-                                    visitedStates.Add(isoString);
-                                }
-                                
-                            }
+                            string sz = $"{childState.getHistoryString()} longer than {visitedStates[isoString].getHistoryString()}";
+                            ++pruneCount;
+                            continue;
                         }
 
+                        // found a shorter path? how is that possible?
+                        ++superCount;
+                        Console.WriteLine("what the hell?");
                     }
-                }
+
+                    searchQueue.Push(childState);
+
+                }   // foreach(childState)
+
             }   // while(queue not empty)
 
             // all reachable states have been exhausted, with no solution found

@@ -81,6 +81,31 @@ namespace KlotskiSolverApplication
             }
         }
 
+        public string getHistoryString()
+        {
+            char tileId = '\0';
+            string sz = "" + movedPiece;
+            for (var i = parentState; i != null && i.movedPiece!='\0'; i = i.parentState)
+            {
+                if (i.movedPiece != tileId)
+                {
+                    tileId = i.movedPiece;
+                    sz = "" + i.movedPiece + sz;
+                }
+            }
+            return sz;
+        }
+
+        // sorting
+
+        public class MoveCountComparer : IComparer<KlotskiState>
+        {
+            public int Compare(KlotskiState x, KlotskiState y)
+            {
+                return x.moveCount - y.moveCount;
+            }
+        }
+
         #endregion
 
         #region serialization
