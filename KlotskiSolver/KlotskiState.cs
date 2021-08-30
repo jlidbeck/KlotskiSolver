@@ -18,6 +18,9 @@ namespace KlotskiSolverApplication
 		public KlotskiState parentState { get; private set; } = null;
 		List<KlotskiState> _children = null;
 
+		// number of steps from startState
+        public int depth { get; private set; } = 0;
+
         // piece move count. this can be less than {depth} because consecutive moves of the same tile are only counted once
         public int moveCount { get; private set; } = 0;
         
@@ -300,28 +303,16 @@ namespace KlotskiSolverApplication
                 p = p.parentState;
             }
 
+            child.depth = this.depth + 1;
+
             child.moveCount = this.moveCount;
             if (child.movedPiece != this.movedPiece)
                 ++child.moveCount;
 
             child.parentState = this;
+
             _children.Add(child);
         }
-
-		public int depth
-		{
-			get
-			{
-				int d = 0;
-				KlotskiState p = this.parentState;
-				while (p != null)
-				{
-					++d;
-					p = p.parentState;
-				}
-				return d;
-			}
-		}
 
         private void replaceTile(string tileId, string newId)
         {
