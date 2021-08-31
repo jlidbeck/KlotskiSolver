@@ -164,6 +164,7 @@ namespace KlotskiSolverApplication
                     Console.WriteLine("    END:      Forward to last state");
                     Console.WriteLine("    ENTER:    Search from current state");
                     Console.WriteLine("    F2:       Display history");
+                    Console.WriteLine("    F3:       Animate history");
                     Console.WriteLine("    F5:       Restart this puzzle");
                     Console.WriteLine("    Ctrl+O:   Open puzzle menu");
                     Console.WriteLine("    ESC:      Exit");
@@ -215,6 +216,28 @@ namespace KlotskiSolverApplication
                 {
                     // print a concise history of moved tiles
                     Console.WriteLine("History: " + endState.getHistoryString());
+                }
+                else if (key.Key == ConsoleKey.F3)
+                {
+                    var states = new List<KlotskiState>();
+                    for (var p = endState; p != null; p = p.parentState)
+                    {
+                        states.Insert(0, p);
+                    }
+
+                    Console.WriteLine();
+                    var cx = Console.CursorLeft;
+                    var cy = Console.CursorTop;
+                    foreach (var p in states)
+                    {
+                        Console.CursorLeft = cx;
+                        Console.CursorTop = cy;
+
+                        Console.WriteLine();
+                        p.write();
+                        Console.WriteLine();
+                        System.Threading.Thread.Sleep(200);
+                    }
                 }
                 else if (key.Key == ConsoleKey.F5)
                 {
