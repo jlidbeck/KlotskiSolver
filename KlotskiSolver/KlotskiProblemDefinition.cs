@@ -59,21 +59,20 @@ namespace KlotskiSolverApplication
          * to the goal state.
          * {history} is used by the search to avoid backtracking to any previous state
          */
-        public KlotskiState search(List<KlotskiState> history, int depth)
+        public KlotskiState search(KlotskiState startState, int depth)
         {
-            // init search
-
-            // keep track of canonical state strings for all states in search history
-            // so that the same state is never searched twice.
-            // this avoids loops and backtracking as well as searching suboptimal paths to the same state
+            // Keep track of all states visited to avoid backtracking or searching suboptimal paths.
+            // These are keyed as canonical strings, because we consider a state visited even if identical tiles
+            // are in exchanged positions.
+            // We also store the complete state (as the value in the key/value pair), because this contains the
+            // history.
 
             var visitedStates = new Dictionary<string, KlotskiState>();
 
             // if a history was provided, add all previous states to the visited set
             // not including the last state, which will be the start state for the search.
-            for(int i=0; i<history.Count()-1; ++i)
+            for (var st = startState.parentState; st != null; st = st.parentState)
             {
-                var st = history[i];
                 visitedStates[st.canonicalString] = st;
             }
 
@@ -81,17 +80,18 @@ namespace KlotskiSolverApplication
             var searchQueue = new MS.Internal.PriorityQueue<KlotskiState>(0, new KlotskiState.MoveCountComparer());
 
             // starting state for search
-            searchQueue.Push(history.Last());
+            searchQueue.Push(startState);
 
-            //Random rand = new Random();
-            int maxDepth = history.Count() + depth;
+            int maxDepth = startState.depth + depth;
 
             // for console reporting: report each time a new depth is reached
             int lastReportedDepth = -1;
 
-            int pruneCount = 0;
-            int superCount = 0;
+            int pruneCount1 = 0;
+            int pruneCount2 = 0;
 
+            //  Search loop
+            //  Continues until goal state is found, or all reachable states have been reached
             while (searchQueue.Count > 0)
             {
                 // take one off the queue
@@ -102,14 +102,13 @@ namespace KlotskiSolverApplication
                 if (state.depth > lastReportedDepth)
                 {
                     lastReportedDepth = state.depth;
-                    if (searchQueue.Count > 0)
-                    {
-                        Console.WriteLine($"Depth: {state.moveCount} / {state.depth} Queue:{searchQueue.Count} Visited:{visitedStates.Count()} ...");// + searchQueue.moveCount);
-                    }
+                    Console.WriteLine($"Depth: {state.moveCount} / {state.depth} Queue:{searchQueue.Count} Visited:{visitedStates.Count()}");
                 }
 
                 if (state.matchesGoalState(this.goalState))
                 {
+                    Console.WriteLine($"Pruned: {pruneCount1}, {pruneCount2}");
+                    // Solution found: stop search
                     return state;
                 }
 
@@ -118,23 +117,15 @@ namespace KlotskiSolverApplication
                     continue;
                 }
 
-                // if we have already visited this state:
                 if (visitedStates.ContainsKey(state.canonicalString))
                 {
-                    // we already know that, due to the ordering of the priority queue,
-                    // this child state must have at least as many moves to get there,
-                    // so we don't need to add this one to the search queue.
+                    // If we have already visited this state, we know (due to the ordering of the priority queue) that we have
+                    // already found a path to this state no longer than this one so we don't need to add this one to the search queue.
 
-                    if (state.moveCount >= visitedStates[state.canonicalString].moveCount)
-                    {
-                        string sz = $"{state.getHistoryString()} longer than {visitedStates[state.canonicalString].getHistoryString()}";
-                        ++pruneCount;
-                        continue;
-                    }
+                    Debug.Assert(state.moveCount >= visitedStates[state.canonicalString].moveCount);
 
-                    // found a shorter path? how is that possible?
-                    ++superCount;
-                    Console.WriteLine("what the hell?");
+                    ++pruneCount1;
+                    continue;
                 }
 
                 visitedStates[state.canonicalString] = state;
@@ -145,25 +136,15 @@ namespace KlotskiSolverApplication
                 // skipping states isomorphic to states in history or in the queue
                 foreach (var childState in children)
                 {
-                    string isoString = childState.canonicalString;
-
-                    // if we have already visited this state:
-                    if (visitedStates.ContainsKey(isoString))
+                    if (visitedStates.ContainsKey(childState.canonicalString))
                     {
-                        // we already know that, due to the ordering of the priority queue,
-                        // this child state must have at least as many moves to get there,
-                        // so we don't need to add this one to the search queue.
+                        // If we have already visited this state, we know (due to the ordering of the priority queue) that we have
+                        // already found a path to this state no longer than this one so we don't need to add this one to the search queue.
 
-                        if (childState.moveCount >= visitedStates[isoString].moveCount)
-                        {
-                            string sz = $"{childState.getHistoryString()} longer than {visitedStates[isoString].getHistoryString()}";
-                            ++pruneCount;
-                            continue;
-                        }
+                        Debug.Assert(childState.moveCount >= visitedStates[childState.canonicalString].moveCount);
 
-                        // found a shorter path? how is that possible?
-                        ++superCount;
-                        Console.WriteLine("what the hell?");
+                        ++pruneCount2;
+                        continue;
                     }
 
                     searchQueue.Push(childState);

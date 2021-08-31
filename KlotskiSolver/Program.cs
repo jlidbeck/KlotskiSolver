@@ -101,7 +101,7 @@ namespace KlotskiSolverApplication
             Random rand = new Random();
 
             var state = pd.startState;                  // current state displayed in the UI
-            var history = new List<KlotskiState>();     // list of consecutive states beginning with problem definition's startState
+            var endState = state;
 
             bool restartNeeded = true;
 
@@ -111,8 +111,7 @@ namespace KlotskiSolverApplication
                 {
                     // clear history back to start state
                     state = pd.startState;
-                    history = new List<KlotskiState>();
-                    history.Add(pd.startState);
+                    endState = state;
 
                     restartNeeded = false;
                 }
@@ -128,9 +127,6 @@ namespace KlotskiSolverApplication
 
                 List<KlotskiState> children = state.getChildStates();
 
-                // manual/interactive
-                KlotskiState nextState = null;
-
                 string prompt = "Available moves: ";
                 if (children.Count() <= 0)
                 {
@@ -140,7 +136,7 @@ namespace KlotskiSolverApplication
                 {
                     for (int j = 0; j < children.Count(); ++j)
                     {
-                        prompt += "\n  " + (j + 1) + ": " + children[j].movedPiece + " " + children[j].movedPieceDirection;
+                        prompt += $"\n   {j + 1}: {children[j].movedPiece} {children[j].movedPieceDirection}";
                     }
                 }
 
@@ -175,11 +171,11 @@ namespace KlotskiSolverApplication
                 }
                 else if (key.Key == ConsoleKey.Home)
                 {
-                    state = history[0];
+                    state = pd.startState;
                 }
                 else if (key.Key == ConsoleKey.End)
                 {
-                    state = history.Last();
+                    state = endState;
                 }
                 else if ((key.Key == ConsoleKey.Backspace && (key.Modifiers & ConsoleModifiers.Shift) == 0) ||
                          (key.Key == ConsoleKey.Z && (key.Modifiers & ConsoleModifiers.Control) != 0))
@@ -191,10 +187,9 @@ namespace KlotskiSolverApplication
                     }
                     else
                     {
-                        int n = history.IndexOf(state);
-                        if (n > 0)
+                        if (state.parentState != null)
                         {
-                            state = history[n - 1];
+                            state = state.parentState;
                         }
                     }
                 }
@@ -202,26 +197,20 @@ namespace KlotskiSolverApplication
                          key.Key == ConsoleKey.Y && (key.Modifiers & ConsoleModifiers.Control) != 0)
                 {
                     // Ctrl+Y or shift+Back: retrack
-                    int n = history.IndexOf(state);
-                    if (n >= 0 && n < history.Count() - 1)
+                    // since the linked list is directional, we have to search backward to find the current state
+                    for (var p = endState; p != null && p.parentState != null; p = p.parentState)
                     {
-                        state = history[n + 1];
+                        if (p.parentState == state)
+                        {
+                            state = p;
+                            break;
+                        }
                     }
                 }
                 else if (key.Key == ConsoleKey.F2)
                 {
                     // print a concise history of moved tiles
-                    char tileId = '\0';
-                    Console.Write("History: ");
-                    for (int i = 0; i < history.Count; ++i)
-                    {
-                        if (history[i].movedPiece != tileId)
-                        {
-                            tileId = history[i].movedPiece;
-                            Console.Write(tileId);
-                        }
-                    }
-                    Console.WriteLine();
+                    Console.WriteLine("History: " + endState.getHistoryString());
                 }
                 else if (key.Key == ConsoleKey.F5)
                 {
@@ -229,32 +218,29 @@ namespace KlotskiSolverApplication
                 }
                 else if (key.Key == ConsoleKey.Enter)
                 {
-                    //autoSearch = true;
-                    Console.WriteLine("\nBeginning auto search from move " + history.Count);
+                    Console.WriteLine($"\nStarting auto search from state {state.depth}");
 
                     var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-                    KlotskiState searchResult = pd.search(history, 130);
+                    KlotskiState searchResult = pd.search(state, 130);
                     stopwatch.Stop();
 
-                    if (searchResult != null)
+                    Console.WriteLine($"Search time: {stopwatch.Elapsed}");
+
+                    if (searchResult == null)
                     {
-                        Console.WriteLine("Search time: " + stopwatch.Elapsed);
-
-                        state = searchResult;
-
+                        Console.WriteLine("No solution found.");
+                    }
+                    else
+                    {
                         // add search history to UI history
-                        int n = history.Count() - 1;
-                        KlotskiState p = searchResult;
-                        while (p != null && p != history[n])
-                        {
-                            history.Insert(n + 1, p);
-
-                            p = p.parentState;
-                        }
+                        endState = state = searchResult;
                     }
                 }
                 else
                 {
+                    // manual/interactive
+                    KlotskiState nextState = null;
+
                     // If the char typed matches one of the piece IDs which can be moved,
                     // make the first move available for that piece.
                     for (int j = 0; j < children.Count(); ++j)
@@ -286,8 +272,7 @@ namespace KlotskiSolverApplication
 
                     if (nextState != null)
                     {
-                        state = nextState;
-                        history.Add(nextState);
+                        state = endState = nextState;
                     }
                 }
             }   // while(true)
