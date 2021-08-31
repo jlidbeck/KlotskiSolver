@@ -8,12 +8,14 @@ namespace KlotskiSolverApplication
 {
     class KlotskiProblemDefinition
     {
-        public int width  { get; private set; } = 0;
-        public int height { get; private set; } = 0;
+        public string name { get; private set; } = null;
+
+        public int width   { get; private set; } = 0;
+        public int height  { get; private set; } = 0;
 
         public KlotskiState goalState  { get; private set; }        // Goal state. Blanks are wildcards; all other values must be matched.
         public KlotskiState startState { get; private set; }
-        public Dictionary<char, char> tileIdToTypeMap { get; private set; }             // Maps tile IDs to type IDs
+        public Dictionary<char, char>         tileIdToTypeMap  { get; private set; }    // Maps tile IDs to type IDs
         public Dictionary<char, ConsoleColor> tileIdToColorMap { get; private set; }
 
         public int goalMoves { get; private set; } = 100;
@@ -22,10 +24,11 @@ namespace KlotskiSolverApplication
         //  Start and goal states are provided as strings representing a 2D array containing tile ID char values and spaces.
         //  tileIdToTypeMap is a string interpreted as char pairs mapping tile IDs (typically alpha chars)
         //  to tile types (typically digits).
-        public KlotskiProblemDefinition(int width, int height, string szStart, string szSolution, string isomorphicTiles, int goalMoves)
+        public KlotskiProblemDefinition(string name, int goalMoves, int width, int height, string szStart, string szSolution, string isomorphicTiles)
         {
             Trace.Assert(width > 0 && height > 0, "Invalid problem definition size");
 
+            this.name = name;
             this.width = width;
             this.height = height;
             this.goalState = new KlotskiState(this, szSolution);
@@ -57,6 +60,9 @@ namespace KlotskiSolverApplication
         {
             tileIdToColorMap = new Dictionary<char, ConsoleColor>();
 
+            // cycle thru these 15 colors.
+            // the first tile ID (by ASCII value) is assigned the color white.
+
             var colors = new ConsoleColor[15] {
                 ConsoleColor.White,
                 ConsoleColor.Magenta,
@@ -77,17 +83,18 @@ namespace KlotskiSolverApplication
 
             tileIdToColorMap[' '] = ConsoleColor.Black;
 
-            int i = 0;
+            // get all unique tileIDs, sorted
             var tileIds = startState.stateString.Distinct().ToArray();
             Array.Sort(tileIds);
 
+            int colorIdx = 0;
             foreach (var c in tileIds)
             {
                 if (!tileIdToColorMap.ContainsKey(c))
                 {
-                    tileIdToColorMap[c] = colors[i];
-                    if (++i == colors.Length)
-                        i = 0;
+                    tileIdToColorMap[c] = colors[colorIdx];
+                    if (++colorIdx == colors.Length)
+                        colorIdx = 0;
                 }
             }
         }

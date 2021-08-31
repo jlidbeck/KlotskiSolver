@@ -7,52 +7,46 @@ namespace KlotskiSolverApplication
 {
     class Program
     {
-        static readonly Dictionary<string, KlotskiProblemDefinition> puzzlePresets = new Dictionary<string, KlotskiProblemDefinition>();
+        static readonly List<KlotskiProblemDefinition> puzzlePresets = new List<KlotskiProblemDefinition>();
 
 
         static void Main(string[] args)
         {
-            puzzlePresets["Forget-me-not"] = new KlotskiProblemDefinition(
-                4, 5, 
-                "bAAcbAAcdeefdghfi  j", 
+            puzzlePresets.Add(new KlotskiProblemDefinition(
+                "Forget-me-not", 81, 4, 5,
+                "bAAcbAAcdeefdghfi  j",
                 "             AA  AA ",
-                "bcdf ghij",
-                81);
+                "bcdf ghij" ));
 
-            puzzlePresets["2.1"] = new KlotskiProblemDefinition(
-                4, 5,
+            puzzlePresets.Add(new KlotskiProblemDefinition(
+                "2.1", 12, 4, 5,
                 "AbbcAAbcddeefg  hi  ",
                 "              A   AA",
-                "de fghi",
-                12);
+                "de fghi" ));
 
-            puzzlePresets["2.2 Ells"] = new KlotskiProblemDefinition(
-                5, 5,
+            puzzlePresets.Add(new KlotskiProblemDefinition(
+                "2.2 Ells", 16, 5, 5,
                 "defAAghBAA CBBi CCjk   lm",
                 "               A    AA   ",
-                "defjkm",
-                16);
+                "defjkm" ));
 
-            puzzlePresets["2.11 Linebreak"] = new KlotskiProblemDefinition(
-                5, 6,
+            puzzlePresets.Add(new KlotskiProblemDefinition(
+                "2.11 Linebreak", 28, 5, 6,
                 " AAA   A   def BBICCBjIkCBBmCC",
                 "                     AAA   A  ",
-                "defjkm",
-                28);
+                "defjkm" ));
 
-            puzzlePresets["2.13"] = new KlotskiProblemDefinition(
-                5, 6,
+            puzzlePresets.Add(new KlotskiProblemDefinition(
+                "2.13", 30, 5, 6,
                 "bAAAfjjAgfhkkgchllmmd   inn ei",
                 "                     AAA   A  ",
-                "A bcde fghi jklm",
-                30);
+                "A bcde fghi jklm" ));
 
-            puzzlePresets["Trivial"] = new KlotskiProblemDefinition(
-                5, 6,
+            puzzlePresets.Add(new KlotskiProblemDefinition(
+                "Trivial", 1, 5, 6,
                 "AA   AA                       ",
                 "                       AA   AA",
-                "",
-                1);
+                "" ));
 
             int depth = 130;
 
@@ -70,7 +64,7 @@ namespace KlotskiSolverApplication
                     for (int i = 0; i < puzzlePresets.Count(); ++i)
                     {
                         var preset = puzzlePresets.ElementAt(i);
-                        Console.WriteLine($"    {i}: {preset.Key.PadRight(25, ' ')} Goal: {preset.Value.goalMoves}");
+                        Console.WriteLine($"    {i}: {preset.name.PadRight(25, ' ')} Goal: {preset.goalMoves}");
                     }
                     Console.Write(">");
 
@@ -84,19 +78,19 @@ namespace KlotskiSolverApplication
                 var pd = puzzlePresets.ElementAt(selectedIndex);
 
                 Console.WriteLine();
-                Console.WriteLine(pd.Key);
+                Console.WriteLine(pd.name);
                 Console.WriteLine();
                 Console.WriteLine("    Start         Goal");
                 Console.WriteLine();
-                var startStateStrings = pd.Value.startState.ToStrings();
-                var goalStateStrings = pd.Value.goalState.ToStrings();
+                var startStateStrings = pd.startState.ToStrings();
+                var goalStateStrings = pd.goalState.ToStrings();
                 for (int i = 0; i < startStateStrings.Count; ++i)
                 {
                     Console.WriteLine("    " + startStateStrings[i] + "   ==>   " + goalStateStrings[i]);
                 }
                 Console.WriteLine();
 
-                solve(pd.Value);
+                solve(pd);
 
                 // how did we get back here? prompt to start a new puzzle
                 selectedIndex = -1;
