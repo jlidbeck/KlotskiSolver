@@ -102,6 +102,20 @@ namespace KlotskiSolverApplication
             }
         }
 
+        //  Comparer for priority queue.
+        //  This comparison function estimates the distance squared for each tile specified in the goal state.
+        //  The move count is given much less weight, so first solution found using this comparer is not guaranteed to
+        //  be optimal. However, this comparer does typically enable searches to find a solution much faster,
+        //  especially when the goal state specifies multiple tiles, such as the 15-slider puzzle.
+        public class DistanceSquaredHeuristicComparer : IComparer<KlotskiState>
+        {
+            public int Compare(KlotskiState x, KlotskiState y)
+            {
+                return  x.getDistanceSquareScore() - y.getDistanceSquareScore()
+                      + x.moveCount                - y.moveCount;
+            }
+        }
+
         #endregion
 
         #region Goal state checking / heuristics
@@ -118,6 +132,39 @@ namespace KlotskiSolverApplication
             }
 
             return true;
+        }
+
+        //  Estimate distance for all tiles indicated in goal state.
+        //  Lower scores indicate this state is expected to be closer to the goal state.
+        public int getDistanceSquareScore()
+        {
+            int diffCount = 0;
+            var goal = context.goalState.stateString;
+            for (int i = 0; i < goal.Length; ++i)
+            {
+                char c = goal[i];
+                if (c == ' ') continue;
+
+                int ix = i % context.width;
+                int iy = i / context.width;
+
+                int minDist = int.MaxValue;
+                for (int j = 0; j < stateString.Length; ++j)
+                {
+                    if (stateString[j] == c)
+                    {
+                        int jx = j % context.width;
+                        int jy = j / context.width;
+                        int dist = (ix - jx) * (ix - jx) + (iy - jy) * (iy - jy);
+                        if (dist < minDist)
+                            minDist = dist;
+                    }
+                }
+
+                diffCount += minDist;
+            }
+
+            return diffCount;
         }
 
         #endregion
@@ -179,7 +226,7 @@ namespace KlotskiSolverApplication
 
             Console.BackgroundColor = ConsoleColor.Black;
             Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine($"Depth: {moveCount} / {depth}");
+            Console.WriteLine($"Depth: {moveCount} / {depth} Score: {getDistanceSquareScore()}");
         }
 
         #endregion

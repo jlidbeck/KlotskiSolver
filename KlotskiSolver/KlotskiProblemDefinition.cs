@@ -142,7 +142,7 @@ namespace KlotskiSolverApplication
             }
 
             // search queue for width-first-search
-            var searchQueue = new MS.Internal.PriorityQueue<KlotskiState>(0, new KlotskiState.MoveCountComparer());
+            var searchQueue = new MS.Internal.PriorityQueue<KlotskiState>(0, new KlotskiState.DistanceSquaredHeuristicComparer());
 
             // starting state for search
             searchQueue.Push(startState);
@@ -184,11 +184,6 @@ namespace KlotskiSolverApplication
 
                 if (visitedStates.ContainsKey(state.canonicalString))
                 {
-                    // If we have already visited this state, we know (due to the ordering of the priority queue) that we have
-                    // already found a path to this state no longer than this one so we don't need to add this one to the search queue.
-
-                    Debug.Assert(state.moveCount >= visitedStates[state.canonicalString].moveCount);
-
                     ++pruneCount1;
                     continue;
                 }
@@ -201,7 +196,7 @@ namespace KlotskiSolverApplication
                 // skipping states isomorphic to states in history or in the queue
                 foreach (var childState in children)
                 {
-                    if (visitedStates.ContainsKey(childState.canonicalString))
+/*                    if (visitedStates.ContainsKey(childState.canonicalString))
                     {
                         // If we have already visited this state, we know (due to the ordering of the priority queue) that we have
                         // already found a path to this state no longer than this one so we don't need to add this one to the search queue.
@@ -211,7 +206,7 @@ namespace KlotskiSolverApplication
                         ++pruneCount2;
                         continue;
                     }
-
+*/
                     searchQueue.Push(childState);
 
                 }   // foreach(childState)
