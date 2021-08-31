@@ -128,6 +128,9 @@ namespace KlotskiSolverApplication
 
                 List<KlotskiState> children = state.getChildStates();
 
+                // sort the menu options to put at the top of the list any moves that are the same tile just moved
+                children.Sort(new KlotskiState.MoveCountComparer());
+
                 string prompt = "Available moves: ";
                 if (children.Count() <= 0)
                 {

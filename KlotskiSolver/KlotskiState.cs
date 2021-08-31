@@ -96,12 +96,15 @@ namespace KlotskiSolverApplication
             return sz;
         }
 
-        // sorting
-
+        //  sorting
+        //  This comparison function is good for a priority queue, giving shorter paths (by move count) higher priority.
+        //  In case of tie, depth is used, giving priority to shorter tile movements.
         public class MoveCountComparer : IComparer<KlotskiState>
         {
             public int Compare(KlotskiState x, KlotskiState y)
             {
+                if (x.moveCount == y.moveCount)
+                    return x.depth - y.depth;
                 return x.moveCount - y.moveCount;
             }
         }
