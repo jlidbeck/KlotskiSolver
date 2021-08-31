@@ -125,7 +125,7 @@ namespace KlotskiSolverApplication
 
                 state.write();
 
-                if (state.matchesGoalState(pd.goalState))
+                if (state.matchesGoalState())
                 {
                     Console.WriteLine("***********  Goal  ***********");
                 }

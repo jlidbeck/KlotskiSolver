@@ -84,23 +84,13 @@ namespace KlotskiSolverApplication
             }
         }
 
-        public string getHistoryString()
-        {
-            char tileId = '\0';
-            string sz = "" + movedPiece;
-            for (var i = parentState; i != null && i.movedPiece != '\0'; i = i.parentState)
-            {
-                if (i.movedPiece != tileId)
-                {
-                    tileId = i.movedPiece;
-                    sz = "" + i.movedPiece + sz;
-                }
-            }
-            return sz;
-        }
+        #endregion
 
-        //  sorting
-        //  This comparison function is good for a priority queue, giving shorter paths (by move count) higher priority.
+        #region Comparers
+
+        //  Comparer for priority queue.
+        //  This compare function guarantees that an optimal shortest-path solution is found,
+        //  because it guarantees that shorter paths (by move count) are always given higher priority.
         //  In case of tie, depth is used, giving priority to shorter tile movements.
         public class MoveCountComparer : IComparer<KlotskiState>
         {
@@ -110,6 +100,24 @@ namespace KlotskiSolverApplication
                     return x.depth - y.depth;
                 return x.moveCount - y.moveCount;
             }
+        }
+
+        #endregion
+
+        #region Goal state checking / heuristics
+
+        //  Determine whether this state satisfies {goalState}, that is,
+        //  all non-blank values in {goalStateString} match values in this.stateString.
+        public bool matchesGoalState()
+        {
+            var goal = context.goalState.stateString;
+            for (int i = 0; i < goal.Length; ++i)
+            {
+                if (goal[i] != ' ' && this.stateString[i] != goal[i])
+                    return false;
+            }
+
+            return true;
         }
 
         #endregion
@@ -176,18 +184,21 @@ namespace KlotskiSolverApplication
 
         #endregion
 
-        //  Determine whether this state satisfies {goalState}, that is,
-        //  all non-blank values in {goalStateString} match values in this.stateString.
-        public bool matchesGoalState(KlotskiState goalState)
+        public string getHistoryString()
         {
-            for (int i = 0; i < goalState.stateString.Length; ++i)
+            char tileId = '\0';
+            string sz = "" + movedPiece;
+            for (var i = parentState; i != null && i.movedPiece != '\0'; i = i.parentState)
             {
-                if (goalState.stateString[i] != ' ' && this.stateString[i] != goalState.stateString[i])
-                    return false;
+                if (i.movedPiece != tileId)
+                {
+                    tileId = i.movedPiece;
+                    sz = "" + i.movedPiece + sz;
+                }
             }
-
-            return true;
+            return sz;
         }
+
 
         public char tileAt(int row, int col)
         {

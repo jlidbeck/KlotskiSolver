@@ -170,7 +170,7 @@ namespace KlotskiSolverApplication
                     Console.WriteLine($"Depth: {state.moveCount} / {state.depth} Queue:{searchQueue.Count} Visited:{visitedStates.Count()}");
                 }
 
-                if (state.matchesGoalState(this.goalState))
+                if (state.matchesGoalState())
                 {
                     Console.WriteLine($"Pruned: {pruneCount1}, {pruneCount2}");
                     // Solution found: stop search
