@@ -43,6 +43,12 @@ namespace KlotskiSolverApplication
                 "A bcde fghi jklm" ));
 
             puzzlePresets.Add(new KlotskiProblemDefinition(
+                "15 Puzzle", 52, 4, 4,
+                "OABCDEFGHIJKLMN ",
+                "ABCDEFGHIJKLMNO ",
+                ""));
+
+            puzzlePresets.Add(new KlotskiProblemDefinition(
                 "Trivial", 1, 5, 6,
                 "AA   AA                       ",
                 "                       AA   AA",
