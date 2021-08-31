@@ -16,28 +16,35 @@ namespace KlotskiSolverApplication
                 4, 5, 
                 "bAAcbAAcdeefdghfi  j", 
                 "             AA  AA ",
-                "A4b2c2d2e3f2g1h1i1j1",
+                "bcdf ghij",
                 81);
 
             puzzlePresets["2.1"] = new KlotskiProblemDefinition(
                 4, 5,
                 "AbbcAAbcddeefg  hi  ",
                 "              A   AA",
-                "A1B2c3d4e4f5g5h5i5",
+                "de fghi",
                 12);
 
-            puzzlePresets["2.11 Breakthrough"] = new KlotskiProblemDefinition(
+            puzzlePresets["2.2 Ells"] = new KlotskiProblemDefinition(
+                5, 5,
+                "defAAghBAA CBBi CCjk   lm",
+                "               A    AA   ",
+                "defjkm",
+                16);
+
+            puzzlePresets["2.11 Linebreak"] = new KlotskiProblemDefinition(
                 5, 6,
                 " AAA   A   def BBICCBjIkCBBmCC",
                 "                     AAA   A  ",
-                "A1B2C3I4d5e5f5j5k5m5",
+                "defjkm",
                 28);
 
             puzzlePresets["2.13"] = new KlotskiProblemDefinition(
                 5, 6,
                 "bAAAfjjAgfhkkgchllmmd   inn ei",
                 "                     AAA   A  ",
-                "A1b2c2d2e2f3g3h3i3j4k4l4m4",
+                "A bcde fghi jklm",
                 30);
 
             puzzlePresets["Trivial"] = new KlotskiProblemDefinition(
@@ -52,7 +59,7 @@ namespace KlotskiSolverApplication
             if (args.Length >= 2)
                 depth = int.Parse(args[1]);
 
-            int selectedIndex = 1;
+            int selectedIndex = 3;
 
             while (true)
             {

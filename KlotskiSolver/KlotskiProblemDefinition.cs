@@ -13,7 +13,8 @@ namespace KlotskiSolverApplication
 
         public KlotskiState goalState  { get; private set; }        // Goal state. Blanks are wildcards; all other values must be matched.
         public KlotskiState startState { get; private set; }
-        public string tileIdToTypeMap { get; private set; }         // String representing mapping from each tile ID to its shape type
+        public Dictionary<char, char> tileIdToTypeMap { get; private set; }             // Maps tile IDs to type IDs
+        public Dictionary<char, ConsoleColor> tileIdToColorMap { get; private set; }
 
         public int goalMoves { get; private set; } = 100;
 
@@ -21,29 +22,86 @@ namespace KlotskiSolverApplication
         //  Start and goal states are provided as strings representing a 2D array containing tile ID char values and spaces.
         //  tileIdToTypeMap is a string interpreted as char pairs mapping tile IDs (typically alpha chars)
         //  to tile types (typically digits).
-        public KlotskiProblemDefinition(int width, int height, string szStart, string szSolution, string tileIdToTypeMap, int goalMoves)
+        public KlotskiProblemDefinition(int width, int height, string szStart, string szSolution, string isomorphicTiles, int goalMoves)
         {
             Trace.Assert(width > 0 && height > 0, "Invalid problem definition size");
 
             this.width = width;
             this.height = height;
-            this.tileIdToTypeMap = tileIdToTypeMap;
             this.goalState = new KlotskiState(this, szSolution);
             this.startState = new KlotskiState(this, szStart);
             this.goalMoves = goalMoves;
+
+            parseTileIdTypeGroups(isomorphicTiles);
+            initializeColors();
+        }
+
+        private void parseTileIdTypeGroups(string isomorphicTiles)
+        {
+            tileIdToTypeMap = new Dictionary<char, char>();
+
+            char typeId = '0';
+            var groups = isomorphicTiles.Split(' ');
+            foreach (var group in groups)
+            {
+                // get a new tile type id char
+                // also make sure it's not any tileId
+                for (++typeId; startState.stateString.IndexOf(typeId) >= 0; ++typeId) ;
+
+                foreach (var tileId in group)
+                    tileIdToTypeMap[tileId] = typeId;
+            }
+        }
+
+        private void initializeColors()
+        {
+            tileIdToColorMap = new Dictionary<char, ConsoleColor>();
+
+            var colors = new ConsoleColor[15] {
+                ConsoleColor.White,
+                ConsoleColor.Magenta,
+                ConsoleColor.Red,
+                ConsoleColor.Cyan,
+                ConsoleColor.Green,
+                ConsoleColor.Blue,
+                ConsoleColor.DarkGray,
+                ConsoleColor.Gray,
+                ConsoleColor.DarkYellow,
+                ConsoleColor.DarkMagenta,
+                ConsoleColor.DarkRed,
+                ConsoleColor.DarkCyan,
+                ConsoleColor.DarkGreen,
+                ConsoleColor.DarkBlue,
+                ConsoleColor.Yellow,
+                };
+
+            tileIdToColorMap[' '] = ConsoleColor.Black;
+
+            int i = 0;
+            var tileIds = startState.stateString.Distinct().ToArray();
+            Array.Sort(tileIds);
+
+            foreach (var c in tileIds)
+            {
+                if (!tileIdToColorMap.ContainsKey(c))
+                {
+                    tileIdToColorMap[c] = colors[i];
+                    if (++i == colors.Length)
+                        i = 0;
+                }
+            }
         }
 
         //  Generates canonical version of {state} with tile IDs replaced with type IDs
         public string getCanonicalStateString(string state)
         {
-            char[] sz = new char[state.Length];
+            char[] sz = state.ToCharArray();
             for (int i = 0; i < state.Length; ++i)
             {
-                int j = tileIdToTypeMap.IndexOf(state[i]);
-                if (j >= 0)
-                    sz[i] = tileIdToTypeMap[j + 1];
-                else
-                    sz[i] = state[i];
+                if (tileIdToTypeMap.ContainsKey(state[i]))
+                {
+                    sz[i] = tileIdToTypeMap[state[i]];
+                }
             }
 
             return new string(sz);

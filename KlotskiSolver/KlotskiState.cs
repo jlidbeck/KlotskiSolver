@@ -85,7 +85,7 @@ namespace KlotskiSolverApplication
         {
             char tileId = '\0';
             string sz = "" + movedPiece;
-            for (var i = parentState; i != null && i.movedPiece!='\0'; i = i.parentState)
+            for (var i = parentState; i != null && i.movedPiece != '\0'; i = i.parentState)
             {
                 if (i.movedPiece != tileId)
                 {
@@ -130,26 +130,10 @@ namespace KlotskiSolverApplication
             return asz;
         }
 
+
+        // Renders the state to the console output
         public void write()
         {
-            var colors = new ConsoleColor[15] {
-                ConsoleColor.White,
-                ConsoleColor.Yellow,
-                ConsoleColor.Magenta,
-                ConsoleColor.Red,
-                ConsoleColor.Cyan,
-                ConsoleColor.Green,
-                ConsoleColor.Blue,
-                ConsoleColor.DarkGray,
-                ConsoleColor.Gray,
-                ConsoleColor.DarkYellow,
-                ConsoleColor.DarkMagenta,
-                ConsoleColor.DarkRed,
-                ConsoleColor.DarkCyan,
-                ConsoleColor.DarkGreen,
-                ConsoleColor.DarkBlue
-                };
-
             Console.ForegroundColor = ConsoleColor.Black;
 
             // only print each tile ID char once
@@ -162,14 +146,8 @@ namespace KlotskiSolverApplication
                 for (int col = 0; col < context.width; ++col)
                 {
                     char tileId = this.tileAt(row, col);
-                    ConsoleColor color = ConsoleColor.Black;
-                    if (tileId >= 'a' && tileId <= 'z')
-                        color = colors[(tileId - 'a') % 15];
-                    else if (tileId >= 'A' && tileId <= 'Z')
-                        color = colors[(tileId - 'A') % 15];
-                    else if (tileId >= '0' && tileId <= '9')
-                        color = colors[(tileId - '0') % 15];
-                    Console.BackgroundColor = color;
+
+                    Console.BackgroundColor = context.tileIdToColorMap[tileId];
                     if (tileIdsPrinted.Contains(tileId))
                     {
                         Console.Write("  ");
