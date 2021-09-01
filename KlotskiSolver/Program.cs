@@ -193,7 +193,10 @@ namespace KlotskiSolverApplication
                 }
                 else if (key.Key == ConsoleKey.Home)
                 {
-                    state = pd.startState;
+                    while (state.parentState != null)
+                    {
+                        state = state.parentState;
+                    }
                 }
                 else if (key.Key == ConsoleKey.End)
                 {
@@ -206,13 +209,6 @@ namespace KlotskiSolverApplication
                     if (state.parentState != null)
                     {
                         state = state.parentState;
-                    }
-                    else
-                    {
-                        if (state.parentState != null)
-                        {
-                            state = state.parentState;
-                        }
                     }
                 }
                 else if (key.Key == ConsoleKey.Backspace && (key.Modifiers & ConsoleModifiers.Shift) != 0 ||
