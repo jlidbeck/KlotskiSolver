@@ -357,6 +357,11 @@ namespace KlotskiSolverApplication
 			return _children;
         }
 
+        public void clearChildStates()
+        {
+            _children = null;
+        }
+
         /**
          * adds child to _children, unless
          *  - child is null

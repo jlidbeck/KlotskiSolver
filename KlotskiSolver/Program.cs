@@ -180,6 +180,9 @@ namespace KlotskiSolverApplication
                     Console.WriteLine("    F2:       Display history");
                     Console.WriteLine("    F3:       Animate history");
                     Console.WriteLine("    F5:       Restart this puzzle");
+                    Console.WriteLine("    F6:       Go to goal state and drop history");
+                    Console.WriteLine("    F7:       Drop history");
+                    Console.WriteLine("    F8:       Shuffle");
                     Console.WriteLine("    Ctrl+O:   Open puzzle menu");
                     Console.WriteLine("    ESC:      Exit");
                     Console.WriteLine();
@@ -257,12 +260,52 @@ namespace KlotskiSolverApplication
                 {
                     restartNeeded = true;
                 }
+                else if (key.Key == ConsoleKey.F6)
+                {
+                    // create a goal state with no history
+                    state = endState = state.context.goalState.clone();
+                }
+                else if (key.Key == ConsoleKey.F7)
+                {
+                    // drop history
+                    state = endState = state.clone();
+                }
+                else if (key.Key == ConsoleKey.F8)
+                {
+                    // shuffle current state, with no history
+                    var shuffleState = pd.shuffle(state.clone(), 1000);
+                    if (shuffleState != null)
+                    {
+                        // this drops any existing history
+                        state = endState = shuffleState.clone();
+                    }
+                }
                 else if (key.Key == ConsoleKey.Enter)
                 {
-                    Console.WriteLine($"\nStarting auto search from state {state.depth}");
+                    Console.WriteLine("Search:\n    [1] DistSqHeuristic (fast)\n     2  MoveCountComparer (slow, finds best solution)\n");
+                    var c = Console.ReadKey();
+                    IComparer<KlotskiState> searchComparer;
+                    switch (c.KeyChar)
+                    {
+                        case '2': 
+                            searchComparer = new KlotskiState.MoveCountComparer();
+                            break;
+                        default: 
+                            searchComparer = new KlotskiState.DistanceSquaredHeuristicComparer(); 
+                            break;
+                    }
+                    int searchDepth = 100;
+                    Console.Write($"\nSearch depth [{searchDepth}]: ");
+                    var str = Console.ReadLine();
+                    if (!int.TryParse(str, out searchDepth))
+                        searchDepth = 100;
+
+                    Console.WriteLine($"\nStarting {searchComparer} search depth={searchDepth} from state {state.depth}");
+
+                    state.clearChildStates();   // force new search
 
                     var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-                    KlotskiState searchResult = pd.search(state, 130);
+                    KlotskiState searchResult = pd.search(state, searchComparer, searchDepth);
                     stopwatch.Stop();
 
                     Console.WriteLine($"Search time: {stopwatch.Elapsed}");

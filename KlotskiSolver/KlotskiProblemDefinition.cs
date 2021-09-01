@@ -145,7 +145,7 @@ namespace KlotskiSolverApplication
             }
 
             // search queue for width-first-search
-            var searchQueue = new MS.Internal.PriorityQueue<KlotskiState>(0, new KlotskiState.DistanceSquaredHeuristicComparer());
+            var searchQueue = new MS.Internal.PriorityQueue<KlotskiState>(0, searchComparer);
 
             // starting state for search
             searchQueue.Push(startState);
@@ -219,5 +219,69 @@ namespace KlotskiSolverApplication
             // all reachable states have been exhausted, with no solution found
             return null;
         }   // void search()
+
+
+        //  Finds a random state {depth} steps from {startState}
+        public KlotskiState shuffle(KlotskiState startState, int depth)
+        {
+            // Keep track of all states visited to avoid backtracking or searching suboptimal paths.
+            // These are keyed as canonical strings, because we consider a state visited even if identical tiles
+            // are in exchanged positions.
+
+            var visitedStates = new HashSet<string>();
+
+            // search queue for depth-first-search
+            var searchStack = new Stack<KlotskiState>();
+
+            // starting state for search
+            searchStack.Push(startState);
+
+            // for console reporting: report each time a new depth is reached
+            int lastReportedDepth = -1;
+
+            //  Search loop
+            //  Continues until goal state is found, or all reachable states have been reached
+            while (searchStack.Count > 0)
+            {
+                // take one off the queue
+                KlotskiState state = searchStack.Pop();
+
+                // output
+                if (state.depth > lastReportedDepth)
+                {
+                    lastReportedDepth = state.depth;
+                    Console.WriteLine($"Depth: {state.moveCount} / {state.depth} Score:{state.getDistanceSquareScore()} Stack:{searchStack.Count} Visited:{visitedStates.Count()}");
+                }
+
+                if (visitedStates.Contains(state.canonicalString))
+                {
+                    continue;
+                }
+
+                if (state.depth - startState.depth >= depth)
+                {
+                    return state;
+                }
+
+                visitedStates.Add(state.canonicalString);
+
+                List<KlotskiState> children = state.getChildStates();
+
+                // add all children to stack, in some order.
+
+                // since this is a last-in-first-out stack, the same heuristic can be used in reverse
+                // to give priority to states further from the goal.
+                children.Sort(new KlotskiState.DistanceSquaredHeuristicComparer());
+
+                foreach (var childState in children)
+                {
+                    searchStack.Push(childState);
+                }
+
+            }   // while(stack not empty)
+
+            // all reachable states have been exhausted, with no solution found
+            return null;
+        }   // void shuffle()
     }
 }
