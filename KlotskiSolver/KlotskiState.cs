@@ -6,11 +6,18 @@ using System.Diagnostics;
 
 namespace KlotskiSolverApplication
 {
+    //  Represents a board state of a specific KlotskiProblemDefinition.
+    //  States make up a tree data structure, with each state linked to its parent state
+    //  and potentially multiple child states.
+
     class KlotskiState
     {
         public const char EMPTY = ' ';
 
+        // serialized state descriptor
         public String stateString { get; private set; } = null;
+
+        // serialized state descriptor with tile IDs replaced with type IDs
         String _canonicalString = null;
 
 		// data structure
@@ -30,19 +37,25 @@ namespace KlotskiSolverApplication
         public Direction movedPieceDirection { get; private set; }
 
 
+        #region Construction
+
         public KlotskiState(KlotskiProblemDefinition context, String stateString)
         {
-            Trace.Assert(stateString.Length == context.width * context.height,
+            Trace.Assert(context != null, "Context cannot be null");
+            Trace.Assert(stateString != null && stateString.Length == context.width * context.height,
                         "Invalid state string: string length must be equal to width x height");
+
             this.context = context;
             this.stateString = stateString;
         }
 
-        protected KlotskiState clone()
+        //  Creates an orphan state object, without a history
+        public KlotskiState clone()
         {
             return new KlotskiState(context, stateString);
         }
 
+        #endregion
 
         #region Comparison
 
@@ -88,9 +101,11 @@ namespace KlotskiSolverApplication
 
         #region Comparers
 
-        //  Comparer for priority queue.
+        //  Comparers useful for priority queues or Sort functions.
+
+        //  MoveCountComparer:
         //  This compare function guarantees that an optimal shortest-path solution is found,
-        //  because it guarantees that shorter paths (by move count) are always given higher priority.
+        //  because shorter paths (by move count) are always given higher priority.
         //  In case of tie, depth is used, giving priority to shorter tile movements.
         public class MoveCountComparer : IComparer<KlotskiState>
         {
@@ -102,10 +117,12 @@ namespace KlotskiSolverApplication
             }
         }
 
-        //  Comparer for priority queue.
-        //  This comparison function estimates the distance squared for each tile specified in the goal state.
-        //  The move count is given much less weight, so first solution found using this comparer is not guaranteed to
-        //  be optimal. However, this comparer does typically enable searches to find a solution much faster,
+        //  DistanceSquaredHeuristicComparer
+        //  This heuristic comparison function estimates the distance from the goal state using the sum of the
+        //  distance squared for each tile cell specified in the goal state.
+        //  The move count is given some weight, to help avoid getting stuck in local minima, but since it is just
+        //  a heuristic, the first solution found using this comparer is not guaranteed to be optimal.
+        //  However, this comparer does typically enable searches to find a solution much faster,
         //  especially when the goal state specifies multiple tiles, such as the 15-slider puzzle.
         public class DistanceSquaredHeuristicComparer : IComparer<KlotskiState>
         {
@@ -140,10 +157,14 @@ namespace KlotskiSolverApplication
         {
             int diffCount = 0;
             var goal = context.goalState.stateString;
+
+            // for each non-blank in the goal state..
             for (int i = 0; i < goal.Length; ++i)
             {
                 char c = goal[i];
                 if (c == ' ') continue;
+
+                // find the nearest matching square (by Euclidean distance)
 
                 int ix = i % context.width;
                 int iy = i / context.width;
@@ -229,8 +250,6 @@ namespace KlotskiSolverApplication
             Console.WriteLine($"Depth: {moveCount} / {depth} Score: {getDistanceSquareScore()}");
         }
 
-        #endregion
-
         public string getHistoryString()
         {
             char tileId = '\0';
@@ -246,6 +265,7 @@ namespace KlotskiSolverApplication
             return sz;
         }
 
+        #endregion
 
         public char tileAt(int row, int col)
         {
@@ -340,9 +360,8 @@ namespace KlotskiSolverApplication
         /**
          * adds child to _children, unless
          *  - child is null
-         *  - child is duplicate of direct ancestor
          *  - child is duplicate of another element in _children
-         *  where isomorphic states are considered duplicates.
+         *  - child is isomorphic to a direct ancestor
          **/
         private void addChildIfNotBacktrack(KlotskiState child)
         {
@@ -355,7 +374,6 @@ namespace KlotskiSolverApplication
             KlotskiState p = parentState;
             while (p != null)
             {
-                //if (p.Equals(child))
                 if (p.isIsomorphicTo(child))
                     return;
                 p = p.parentState;

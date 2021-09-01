@@ -21,21 +21,24 @@ namespace KlotskiSolverApplication
         public int goalMoves { get; private set; } = 100;
 
         //  Initializes a problem definition.
-        //  Start and goal states are provided as strings representing a 2D array containing tile ID char values and spaces.
-        //  tileIdToTypeMap is a string interpreted as char pairs mapping tile IDs (typically alpha chars)
-        //  to tile types (typically digits).
-        public KlotskiProblemDefinition(string name, int goalMoves, int width, int height, string szStart, string szSolution, string isomorphicTiles)
+        //  Start and goal states are provided as strings of length width x height representing a 2D array of spaces and
+        //  tile ID char values and spaces.
+        //  isomorphicTileGroups: defines which tiles are considered identical for the purpose of comparing states.
+        //  This string is a space-separated list of strings where each string is a set of tile IDs.
+        //  e.g. "ABC IJ" indicates that tiles A, B, and C are identical, tiles I and J are identical, and any other tiles
+        //  are unique.
+        public KlotskiProblemDefinition(string name, int goalMoves, int width, int height, string szStartState, string szGoalState, string isomorphicTileGroups)
         {
             Trace.Assert(width > 0 && height > 0, "Invalid problem definition size");
 
             this.name = name;
+            this.goalMoves = goalMoves;
             this.width = width;
             this.height = height;
-            this.goalState = new KlotskiState(this, szSolution);
-            this.startState = new KlotskiState(this, szStart);
-            this.goalMoves = goalMoves;
+            this.goalState = new KlotskiState(this, szGoalState);
+            this.startState = new KlotskiState(this, szStartState);
 
-            parseTileIdTypeGroups(isomorphicTiles);
+            parseTileIdTypeGroups(isomorphicTileGroups);
             initializeColors();
         }
 
@@ -119,12 +122,12 @@ namespace KlotskiSolverApplication
         // search
         //
 
-        /**
-         * Starts a new search from the last state in {history}
-         * to the goal state.
-         * {history} is used by the search to avoid backtracking to any previous state
-         */
-        public KlotskiState search(KlotskiState startState, int depth)
+        //  Searches for {startState.context.goalState} starting at {startState},
+        //  using a breadth-first search up to the given depth.
+        //  If a solution is found, returns a reference to the end state, which is isomorphic to the goal state.
+        //  The returned state has a linked-list path back to {startState} found by traversing KlotskiState.parent.
+        //
+        public KlotskiState search(KlotskiState startState, IComparer<KlotskiState> searchComparer, int depth)
         {
             // Keep track of all states visited to avoid backtracking or searching suboptimal paths.
             // These are keyed as canonical strings, because we consider a state visited even if identical tiles

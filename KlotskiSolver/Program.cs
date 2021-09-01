@@ -9,6 +9,8 @@ namespace KlotskiSolverApplication
     {
         static readonly List<KlotskiProblemDefinition> puzzlePresets = new List<KlotskiProblemDefinition>();
 
+        static int animationDelay = 200;
+
 
         static void Main(string[] args)
         {
@@ -61,8 +63,12 @@ namespace KlotskiSolverApplication
 
             int selectedIndex = 3;
 
+            //  Main program loop: topmost menu with list of presets
             while (true)
             {
+                // if a puzzle is already selected, skip ahead to solve menu
+                // otherwise, show puzzle menu
+
                 if (selectedIndex < 0)
                 {
                     Console.WriteLine();
@@ -83,22 +89,24 @@ namespace KlotskiSolverApplication
 
                 var pd = puzzlePresets.ElementAt(selectedIndex);
 
+                // display quick and simple ASCII summary of puzzle
                 Console.WriteLine();
                 Console.WriteLine(pd.name);
                 Console.WriteLine();
-                Console.WriteLine("    Start         Goal");
+                Console.WriteLine("     Start         Goal");
                 Console.WriteLine();
                 var startStateStrings = pd.startState.ToStrings();
                 var goalStateStrings = pd.goalState.ToStrings();
                 for (int i = 0; i < startStateStrings.Count; ++i)
                 {
-                    Console.WriteLine("    " + startStateStrings[i] + "   ==>   " + goalStateStrings[i]);
+                    Console.WriteLine($"     {startStateStrings[i]}   ==>   {goalStateStrings[i]}");
                 }
                 Console.WriteLine();
 
+                // enter solver menu loop
                 solve(pd);
 
-                // how did we get back here? prompt to start a new puzzle
+                // solver menu loop exited: return to main menu, prompt to start a new puzzle
                 selectedIndex = -1;
             }   // while(true)
         }
@@ -242,7 +250,7 @@ namespace KlotskiSolverApplication
                         Console.WriteLine();
                         p.write();
                         Console.WriteLine();
-                        System.Threading.Thread.Sleep(200);
+                        System.Threading.Thread.Sleep(animationDelay);
                     }
                 }
                 else if (key.Key == ConsoleKey.F5)
