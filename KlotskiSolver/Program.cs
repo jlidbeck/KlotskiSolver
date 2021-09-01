@@ -138,6 +138,8 @@ namespace KlotskiSolverApplication
                     Console.WriteLine("***********  Goal  ***********");
                 }
 
+                Console.WriteLine($"Depth: {state.moveCount} / {state.depth} DistSq: {state.getDistanceSquareScore()} {(state.parentState == null ? ' ' : '<')}{(state==endState ? ' ' : '>')} ");
+
                 // choose a move
 
                 List<KlotskiState> children = state.getChildStates();
@@ -249,6 +251,7 @@ namespace KlotskiSolverApplication
                         Console.WriteLine();
                         p.write();
                         Console.WriteLine();
+                        Console.WriteLine($"Depth: {p.moveCount} / {p.depth} DistSq: {p.getDistanceSquareScore():3} ");
                         System.Threading.Thread.Sleep(animationDelay);
                     }
                 }
@@ -278,7 +281,7 @@ namespace KlotskiSolverApplication
                 }
                 else if (key.Key == ConsoleKey.Enter)
                 {
-                    Console.WriteLine("Search:\n    [1] DistSqHeuristic (fast)\n     2  MoveCountComparer (slow, finds best solution)\n");
+                    Console.WriteLine("Search:\n    [1] DistSqHeuristic (fast)\n     2  MoveCount BFS (slow, finds best solution)\n");
                     var c = Console.ReadKey();
                     IComparer<KlotskiState> searchComparer;
                     switch (c.KeyChar)
@@ -296,24 +299,31 @@ namespace KlotskiSolverApplication
                     if (!int.TryParse(str, out searchDepth))
                         searchDepth = 100;
 
-                    Console.WriteLine($"\nStarting {searchComparer} search depth={searchDepth} from state {state.depth}");
+                    Console.WriteLine($"\nStarting search: {searchComparer} depth={searchDepth} from state {state.depth}");
 
                     state.clearChildStates();   // force new search
 
-                    var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-                    KlotskiState searchResult = pd.search(state, searchComparer, searchDepth);
-                    stopwatch.Stop();
-
-                    Console.WriteLine($"Search time: {stopwatch.Elapsed}");
-
-                    if (searchResult == null)
+                    try
                     {
-                        Console.WriteLine("No solution found.");
+                        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+                        KlotskiState searchResult = pd.search(state, searchComparer, searchDepth);
+                        stopwatch.Stop();
+
+                        Console.WriteLine($"Search time: {stopwatch.Elapsed}");
+
+                        if (searchResult == null)
+                        {
+                            Console.WriteLine("No solution found.");
+                        }
+                        else
+                        {
+                            // add search history to UI history
+                            endState = state = searchResult;
+                        }
                     }
-                    else
+                    catch (Exception err)
                     {
-                        // add search history to UI history
-                        endState = state = searchResult;
+                        Console.WriteLine($"Error: {err.Message}");
                     }
                 }
                 else

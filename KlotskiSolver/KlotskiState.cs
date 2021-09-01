@@ -216,6 +216,9 @@ namespace KlotskiSolverApplication
         // Renders the state to the console output
         public void write()
         {
+            var fg = Console.ForegroundColor;
+            var bg = Console.BackgroundColor;
+
             Console.ForegroundColor = ConsoleColor.Black;
 
             // only print each tile ID char once
@@ -245,9 +248,8 @@ namespace KlotskiSolverApplication
                 Console.WriteLine();
             }
 
-            Console.BackgroundColor = ConsoleColor.Black;
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine($"Depth: {moveCount} / {depth} Score: {getDistanceSquareScore()}");
+            Console.BackgroundColor = bg;
+            Console.ForegroundColor = fg;
         }
 
         public string getHistoryString()

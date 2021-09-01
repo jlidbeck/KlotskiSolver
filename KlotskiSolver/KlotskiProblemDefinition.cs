@@ -97,7 +97,9 @@ namespace KlotskiSolverApplication
                 {
                     tileIdToColorMap[c] = colors[colorIdx];
                     if (++colorIdx == colors.Length)
-                        colorIdx = 0;
+                    {
+                        colorIdx = 1;
+                    }
                 }
             }
         }
@@ -153,7 +155,8 @@ namespace KlotskiSolverApplication
             int maxDepth = startState.depth + depth;
 
             // for console reporting: report each time a new depth is reached
-            int lastReportedDepth = -1;
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            long lastReport = -1000;
 
             int pruneCount1 = 0;
             int pruneCount2 = 0;
@@ -162,14 +165,21 @@ namespace KlotskiSolverApplication
             //  Continues until goal state is found, or all reachable states have been reached
             while (searchQueue.Count > 0)
             {
+                if (Console.KeyAvailable)
+                {
+                    Console.ReadKey(true);
+                    Console.WriteLine("Search canceled.");
+                    return null;
+                }
+
                 // take one off the queue
                 KlotskiState state = searchQueue.Top;
                 searchQueue.Pop();
 
-                // output
-                if (state.depth > lastReportedDepth)
+                // periodically output to console
+                if (stopwatch.ElapsedMilliseconds - lastReport > 100 )
                 {
-                    lastReportedDepth = state.depth;
+                    lastReport = stopwatch.ElapsedMilliseconds;
                     Console.WriteLine($"Depth: {state.moveCount} / {state.depth} Queue:{searchQueue.Count} Visited:{visitedStates.Count()}");
                 }
 
