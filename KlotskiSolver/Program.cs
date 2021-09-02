@@ -204,8 +204,9 @@ namespace KlotskiSolverApplication
                 {
                     state = endState;
                 }
-                else if ((key.Key == ConsoleKey.Backspace && (key.Modifiers & ConsoleModifiers.Shift) == 0) ||
-                         (key.Key == ConsoleKey.Z && (key.Modifiers & ConsoleModifiers.Control) != 0))
+                else if (key.KeyChar == ',' ||
+                        (key.Key == ConsoleKey.Backspace && (key.Modifiers & ConsoleModifiers.Shift) == 0) ||
+                        (key.Key == ConsoleKey.Z && (key.Modifiers & ConsoleModifiers.Control) != 0))
                 {
                     // Ctrl+Z or backspace: backtrack
                     if (state.parentState != null)
@@ -213,7 +214,8 @@ namespace KlotskiSolverApplication
                         state = state.parentState;
                     }
                 }
-                else if (key.Key == ConsoleKey.Backspace && (key.Modifiers & ConsoleModifiers.Shift) != 0 ||
+                else if (key.KeyChar == '.' ||
+                         key.Key == ConsoleKey.Backspace && (key.Modifiers & ConsoleModifiers.Shift) != 0 ||
                          key.Key == ConsoleKey.Y && (key.Modifiers & ConsoleModifiers.Control) != 0)
                 {
                     // Ctrl+Y or shift+Back: retrack
@@ -235,9 +237,17 @@ namespace KlotskiSolverApplication
                 else if (key.Key == ConsoleKey.F3)
                 {
                     var states = new List<KlotskiState>();
+
+                    // place states in list in forward order, {endState} at end
                     for (var p = endState; p != null; p = p.parentState)
                     {
                         states.Insert(0, p);
+                    }
+
+                    // Shift+F3 to animate in reverse
+                    if ((key.Modifiers & ConsoleModifiers.Shift) != 0)
+                    {
+                        states.Reverse();
                     }
 
                     Console.WriteLine();
@@ -251,8 +261,13 @@ namespace KlotskiSolverApplication
                         Console.WriteLine();
                         p.write();
                         Console.WriteLine();
-                        Console.WriteLine($"Depth: {p.moveCount} / {p.depth} DistSq: {p.getDistanceSquareScore():3} ");
+                        Console.WriteLine($"Depth: {p.moveCount} / {p.depth} DistSq: {p.getDistanceSquareScore()} ");
                         System.Threading.Thread.Sleep(animationDelay);
+                        if (Console.KeyAvailable)
+                        {
+                            state = p;
+                            break;
+                        }
                     }
                 }
                 else if (key.Key == ConsoleKey.F5)
