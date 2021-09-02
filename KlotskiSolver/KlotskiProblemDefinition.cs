@@ -42,6 +42,32 @@ namespace KlotskiSolverApplication
             initializeColors();
         }
 
+        public static KlotskiProblemDefinition createFifteenPuzzle(string name, int width, int height, int goalMoves)
+        {
+            var random = new Random();
+            int n = width * height;
+
+            var szGoalState = new char[n];
+            for (int i = 0; i < n - 1; ++i)
+            {
+                szGoalState[i] = (char)('A' + i);
+            }
+            szGoalState[n - 1] = ' ';
+
+            var szStartState = (char[])szGoalState.Clone();
+
+            // this loop ensures we always do an even number of swaps (not including the empty square swap)
+            for (int i = n - 2; i > n % 2; --i)
+            {
+                int j = random.Next(i);
+                char c = szStartState[i];
+                szStartState[i] = szStartState[j];
+                szStartState[j] = c;
+            }
+
+            return new KlotskiProblemDefinition(name, goalMoves, width, height, new string(szStartState), new string(szGoalState), "");
+        }
+
         private void parseTileIdTypeGroups(string isomorphicTiles)
         {
             tileIdToTypeMap = new Dictionary<char, char>();

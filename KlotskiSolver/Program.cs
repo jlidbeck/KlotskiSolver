@@ -21,6 +21,20 @@ namespace KlotskiSolverApplication
                 "bcdf ghij" ));
 
             puzzlePresets.Add(new KlotskiProblemDefinition(
+                "1.50", 120, 4, 5,
+                "gAAh" +
+                "eAAf" +
+                "ebbf" +
+                "iccj" +
+                " dd ",
+                "gAAh" +
+                " AAf" +
+                " bbf" +
+                "eccj" +
+                "eidd",
+                "bcd ef ghij"));
+
+            puzzlePresets.Add(new KlotskiProblemDefinition(
                 "2.1", 12, 4, 5,
                 "AbbcAAbcddeefg  hi  ",
                 "              A   AA",
@@ -34,34 +48,90 @@ namespace KlotskiSolverApplication
 
             puzzlePresets.Add(new KlotskiProblemDefinition(
                 "2.11 Linebreak", 28, 5, 6,
-                " AAA   A   def BBICCBjIkCBBmCC",
-                "                     AAA   A  ",
+                " AAA " +
+                "  A  " +
+                " def " +
+                "BBICC" +
+                "BjIkC" +
+                "BBmCC",
+                "     " +
+                "     " +
+                "     " +
+                "     " +
+                " AAA " +
+                "  A  ",
                 "defjkm" ));
 
             puzzlePresets.Add(new KlotskiProblemDefinition(
                 "2.13", 30, 5, 6,
-                "bAAAfjjAgfhkkgchllmmd   inn ei",
-                "                     AAA   A  ",
+                "bAAAf" +
+                "jjAgf" +
+                "hkkgc" +
+                "hllmm" +
+                "d   i" +
+                "nn ei",
+                "     " +
+                "     " +
+                "     " +
+                "     " +
+                " AAA " +
+                "  A  ",
                 "A bcde fghi jklm" ));
 
+            puzzlePresets.Add(KlotskiProblemDefinition.createFifteenPuzzle("3x3 Boss Puzzle", 3, 3, 31));
+            puzzlePresets.Add(KlotskiProblemDefinition.createFifteenPuzzle("4x4 Boss Puzzle", 4, 4, 200));
+            puzzlePresets.Add(KlotskiProblemDefinition.createFifteenPuzzle("5x5 Boss Puzzle", 5, 5, 200));
+
             puzzlePresets.Add(new KlotskiProblemDefinition(
-                "15 Puzzle", 52, 4, 4,
-                "OABCDEFGHIJKLMN ",
-                "ABCDEFGHIJKLMNO ",
+                "Burr", 35, 7, 7,
+                "AA   ii" +
+                "AAbbbjj" +
+                "ccbfbdd" +
+                "cggfhhd" +
+                "ccefedd" +
+                "kkeee  " +
+                "ll     ",
+                "       " +
+                "       " +
+                "       " +
+                "       " +
+                "       " +
+                "     AA" +
+                "     AA",
+                "ghijkl"));
+
+            // minimal example that gets messed up by pruning A's double move b/c it finds Ar, Br, Ar first
+            puzzlePresets.Add(new KlotskiProblemDefinition(
+                "Trivial 1", 2, 4, 1,
+                "A B ",
+                "  AB",
                 ""));
 
             puzzlePresets.Add(new KlotskiProblemDefinition(
-                "Trivial", 1, 5, 6,
-                "AA   AA                       ",
-                "                       AA   AA",
+                "Trivial 2", 1, 5, 6,
+                "AA   " +
+                "AA   " +
+                "     " +
+                "     " +
+                "     " +
+                "     ",
+                "     " +
+                "     " +
+                "     " +
+                "     " +
+                "   AA" +
+                "   AA",
                 "" ));
 
-            int depth = 130;
 
-            if (args.Length >= 2)
-                depth = int.Parse(args[1]);
+            int selectedIndex = -1;
+            if (args.Length >= 1)
+            {
+                int idx;
+                if (int.TryParse(args[0], out idx))
+                    selectedIndex = idx;
+            }
 
-            int selectedIndex = 3;
 
             //  Main program loop: topmost menu with list of presets
             while (true)
@@ -76,7 +146,7 @@ namespace KlotskiSolverApplication
                     for (int i = 0; i < puzzlePresets.Count(); ++i)
                     {
                         var preset = puzzlePresets.ElementAt(i);
-                        Console.WriteLine($"    {i}: {preset.name.PadRight(25, ' ')} Goal: {preset.goalMoves}");
+                        Console.WriteLine($"{i,6}: {preset.name,-25} Goal: {preset.goalMoves,3}");
                     }
                     Console.Write(">");
 
@@ -156,7 +226,8 @@ namespace KlotskiSolverApplication
                 {
                     for (int j = 0; j < children.Count(); ++j)
                     {
-                        prompt += $"\n   {j + 1}: {children[j].movedPiece} {children[j].movedPieceDirection}";
+                        var st = children[j];
+                        prompt += $"\n   {j+1}: {st.movedPiece} {st.movedPieceDirection,5}   {st.moveCount} / {st.depth}";
                     }
                 }
 
