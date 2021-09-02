@@ -119,17 +119,33 @@ namespace KlotskiSolverApplication
 
         //  DistanceSquaredHeuristicComparer
         //  This heuristic comparison function estimates the distance from the goal state using the sum of the
-        //  distance squared for each tile cell specified in the goal state.
-        //  The move count is given some weight, to help avoid getting stuck in local minima, but since it is just
-        //  a heuristic, the first solution found using this comparer is not guaranteed to be optimal.
-        //  However, this comparer does typically enable searches to find a solution much faster,
-        //  especially when the goal state specifies multiple tiles, such as the 15-slider puzzle.
+        //  distance squared for each tile cell specified in the goal state. It is not guaranteed to find an
+        //  optimal solution, but it will probably find a solution much faster.
+        //  Note that for best performance a larger depth cutoff should be used, well more than the minimum.
+        //  This comparer does especially well when the goal state specifies multiple tiles, such as the 15-slider
+        //  puzzle.
+        //  The move count is given some weight, to help avoid getting stuck in local minima.
+        //
         public class DistanceSquaredHeuristicComparer : IComparer<KlotskiState>
         {
+            public int distSqWeight { get; private set; } = 7;
+            public int moveCountWeight { get; private set; } = 2;
+
+            public DistanceSquaredHeuristicComparer(int distSqWeight, int moveCountWeight)
+            {
+                this.distSqWeight = distSqWeight;
+                this.moveCountWeight = moveCountWeight;
+            }
+
+            public override string ToString()
+            {
+                return $"DistanceSquaredHeuristic {distSqWeight}/{moveCountWeight}";
+            }
+
             public int Compare(KlotskiState x, KlotskiState y)
             {
-                return  x.getDistanceSquareScore() - y.getDistanceSquareScore()
-                      + x.moveCount                - y.moveCount;
+                return distSqWeight    * ( x.getDistanceSquareScore() - y.getDistanceSquareScore() )
+                     + moveCountWeight * ( x.moveCount                - y.moveCount                );
             }
         }
 

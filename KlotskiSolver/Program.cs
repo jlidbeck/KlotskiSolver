@@ -286,11 +286,11 @@ namespace KlotskiSolverApplication
                     IComparer<KlotskiState> searchComparer;
                     switch (c.KeyChar)
                     {
-                        case '2': 
+                        case '2':
                             searchComparer = new KlotskiState.MoveCountComparer();
                             break;
-                        default: 
-                            searchComparer = new KlotskiState.DistanceSquaredHeuristicComparer(); 
+                        default:
+                            searchComparer = new KlotskiState.DistanceSquaredHeuristicComparer(7, 2);
                             break;
                     }
                     int searchDepth = 100;

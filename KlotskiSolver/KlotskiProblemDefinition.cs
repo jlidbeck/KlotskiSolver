@@ -231,9 +231,15 @@ namespace KlotskiSolverApplication
         }   // void search()
 
 
-        //  Finds a random state {depth} steps from {startState}
+        //  Finds a random state {depth} steps from {startState}.
+        //  This is nearly the search algorithm reversed, using a stack instead of a queue, for a depth-first search.
+        //  Longer paths are preferred, in fact, the first valid path of length {depth} without a loop is returned.
+        //  The algorithm uses the same dist-sq heuristic used by the quick search. Here higher values are used to
+        //  guide the search further from the {startState}.
         public KlotskiState shuffle(KlotskiState startState, int depth)
         {
+            var random = new Random();
+
             // Keep track of all states visited to avoid backtracking or searching suboptimal paths.
             // These are keyed as canonical strings, because we consider a state visited even if identical tiles
             // are in exchanged positions.
@@ -281,7 +287,7 @@ namespace KlotskiSolverApplication
 
                 // since this is a last-in-first-out stack, the same heuristic can be used in reverse
                 // to give priority to states further from the goal.
-                children.Sort(new KlotskiState.DistanceSquaredHeuristicComparer());
+                children.Sort(new KlotskiState.DistanceSquaredHeuristicComparer(random.Next(10), 2));
 
                 foreach (var childState in children)
                 {
