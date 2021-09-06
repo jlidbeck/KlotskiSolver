@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Diagnostics;
+using Newtonsoft.Json;
 
 namespace KlotskiSolverApplication
 {
@@ -21,10 +22,13 @@ namespace KlotskiSolverApplication
         // serialized state descriptor with tile IDs replaced with type IDs
         String _canonicalString = null;
 
-		// data structure
+		[JsonIgnore]
         public KlotskiProblemDefinition context { get; private set; } = null;
-		public KlotskiState parentState { get; private set; } = null;
-		List<KlotskiState> _children = null;
+
+        [JsonIgnore]
+        public KlotskiState parentState { get; private set; } = null;
+		
+        List<KlotskiState> _children = null;
 
 		// number of steps from startState
         public int depth { get; private set; } = 0;
@@ -85,6 +89,7 @@ namespace KlotskiSolverApplication
 
         //  Returns a canonical form for the state, with tile IDs replaced with tile type IDs,
         //  for isomorphic state comparisons
+        [JsonIgnore]
         public string canonicalString
         {
             get

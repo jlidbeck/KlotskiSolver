@@ -263,6 +263,11 @@ namespace KlotskiSolverApplication
                 {
                     return;
                 }
+                else if (key.Key == ConsoleKey.S && (key.Modifiers & ConsoleModifiers.Control) != 0)
+                {
+                    var filename = $"Klotski-{pd.name}.json";
+                    pd.write(filename);
+                }
                 else if (key.Key == ConsoleKey.Home)
                 {
                     while (state.parentState != null)

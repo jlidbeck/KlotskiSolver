@@ -3,12 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Diagnostics;
+using Newtonsoft.Json;
+using System.IO;
+using System.Runtime.Serialization;
 
 namespace KlotskiSolverApplication
 {
     [DebuggerDisplay("Start:{startState.stateString} Goal:{goalState.stateString}")]
+    [DataContract]
     class KlotskiProblemDefinition
     {
+        [DataMember]
         public string name { get; private set; } = null;
 
         public int width   { get; private set; } = 0;
@@ -16,10 +21,21 @@ namespace KlotskiSolverApplication
 
         public KlotskiState goalState  { get; private set; }        // Goal state. Blanks are wildcards; all other values must be matched.
         public KlotskiState startState { get; private set; }
+
+        [DataMember]
         public Dictionary<char, char>         tileIdToTypeMap  { get; private set; }    // Maps tile IDs to type IDs
+
+        [DataMember]
         public Dictionary<char, ConsoleColor> tileIdToColorMap { get; private set; }
 
+        [DataMember]
         public int goalMoves { get; private set; } = 100;
+
+        [DataMember]
+        public string goalStateString => goalState.stateString;
+
+        [DataMember]
+        public string startStateString => startState.stateString;
 
         //  Initializes a problem definition.
         //  Start and goal states are provided as strings of length width x height representing a 2D array of spaces and
@@ -130,6 +146,30 @@ namespace KlotskiSolverApplication
                 }
             }
         }
+
+        #region Serialization
+
+        public void write(string filename)
+        {
+            using (StreamWriter file = File.CreateText(filename))
+            {
+                var jsonSerializer = new JsonSerializer();
+                jsonSerializer.Formatting = Formatting.Indented;
+                jsonSerializer.Serialize(file, this);
+            }
+        }
+
+        public static KlotskiProblemDefinition read(string filename)
+        {
+            using (var streamReader = File.OpenText(filename))
+            {
+                var jsonSerializer = new JsonSerializer();
+                var pd = (KlotskiProblemDefinition)jsonSerializer.Deserialize(streamReader, typeof(KlotskiProblemDefinition));
+                return pd;
+            }
+        }
+
+        #endregion
 
         //  Generates canonical version of {state} with tile IDs replaced with type IDs
         public string getCanonicalStateString(string state)

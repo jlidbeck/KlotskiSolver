@@ -12,3 +12,6 @@ obj/
 
 # Visual Studio cache
 .vs/
+
+# Packages
+packages/
