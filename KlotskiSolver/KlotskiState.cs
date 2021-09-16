@@ -511,106 +511,106 @@ namespace KlotskiSolverApplication
                 || (tileId >= 'a' && tileId <= 'z')))
                 return null;
 
-            KlotskiState newstate = this.clone();
+            //KlotskiState newstate = this.clone();
+            var newStateString = stateString.ToArray();
 
             int tilesToMove = 0;
 
-            for (int row = 0; row < context.height; ++row)
+            for (int idx = 0; idx < stateString.Length; ++idx)
             {
-                for (int col = 0; col < context.width; ++col)
+                if (stateString[idx] == tileId)
                 {
-                    if (this.tileAt(row, col) == tileId)
+                    int col = idx % context.width;
+                    int row = idx / context.width;
+
+                    switch (direction)
                     {
-                        switch(direction)
-                        {
-                            case Direction.DOWN:
-                                if (row >= context.height - 1)
-                                    return null;   // no room to move down
+                        case Direction.DOWN:
+                            if (row >= context.height - 1)
+                                return null;   // no room to move down
 
-                                if (this.tileAt(row + 1, col) != EMPTY && this.tileAt(row + 1, col) != tileId)
-                                    return null;   // different tile in the way
+                            if (stateString[idx + context.width] != EMPTY && stateString[idx + context.width] != tileId)
+                                return null;   // different tile in the way
 
-                                // move tile down
-                                newstate.setTileAt(row + 1, col, tileId);
+                            // move tile down
+                            newStateString[idx + context.width] = tileId;
 
-                                // replace with empty, unless part of tile extending upward
-                                if (row <= 0 || this.tileAt(row - 1, col) != tileId)
-                                {
-                                    // top of tile: replace with empty
-                                    newstate.setTileAt(row, col, EMPTY);
-                                }
-                                break;
+                            // replace with empty, unless part of tile extending upward
+                            if (row <= 0 || stateString[idx - context.width] != tileId)
+                            {
+                                // top of tile: replace with empty
+                                newStateString[idx] = EMPTY;
+                            }
+                            break;
 
-                            case Direction.RIGHT:
-                                if (col >= context.width - 1)
-                                    return null;   // no room to move right
+                        case Direction.RIGHT:
+                            if (col >= context.width - 1)
+                                return null;   // no room to move right
 
-                                if (this.tileAt(row, col+1) != EMPTY && this.tileAt(row, col+1) != tileId)
-                                    return null;   // different tile in the way
+                            if (stateString[idx + 1] != EMPTY && stateString[idx + 1] != tileId)
+                                return null;   // different tile in the way
 
-                                // move tile right
-                                newstate.setTileAt(row, col+1, tileId);
+                            // move tile right
+                            newStateString[idx + 1] = tileId;
 
-                                // replace with empty, unless part of tile extending leftward
-                                if (col <= 0 || this.tileAt(row, col-1) != tileId)
-                                {
-                                    // top of tile: replace with empty
-                                    newstate.setTileAt(row, col, EMPTY);
-                                }
-                                break;
+                            // replace with empty, unless part of tile extending leftward
+                            if (col <= 0 || stateString[idx - 1] != tileId)
+                            {
+                                // top of tile: replace with empty
+                                newStateString[idx] = EMPTY;
+                            }
+                            break;
 
-                            case Direction.UP:
-                                if (row <=0)
-                                    return null;   // no room to move up
+                        case Direction.UP:
+                            if (row <= 0)
+                                return null;   // no room to move up
 
-                                if (this.tileAt(row - 1, col) != EMPTY && this.tileAt(row - 1, col) != tileId)
-                                    return null;   // different tile in the way
+                            if (stateString[idx - context.width] != EMPTY && stateString[idx - context.width] != tileId)
+                                return null;   // different tile in the way
 
-                                // move tile up
-                                newstate.setTileAt(row - 1, col, tileId);
+                            // move tile up
+                            newStateString[idx - context.width] = tileId;
 
-                                // replace with empty, unless part of tile extending downward
-                                if (row >=context.height-1 || this.tileAt(row + 1, col) != tileId)
-                                {
-                                    // top of tile: replace with empty
-                                    newstate.setTileAt(row, col, EMPTY);
-                                }
-                                break;
+                            // replace with empty, unless part of tile extending downward
+                            if (row >= context.height - 1 || stateString[idx + context.width] != tileId)
+                            {
+                                // top of tile: replace with empty
+                                newStateString[idx] = EMPTY;
+                            }
+                            break;
 
-                            case Direction.LEFT:
-                                if (col <=0)
-                                    return null;   // no room to move left
+                        case Direction.LEFT:
+                            if (col <= 0)
+                                return null;   // no room to move left
 
-                                if (this.tileAt(row, col - 1) != EMPTY && this.tileAt(row, col - 1) != tileId)
-                                    return null;   // different tile in the way
+                            if (stateString[idx - 1] != EMPTY && stateString[idx - 1] != tileId)
+                                return null;   // different tile in the way
 
-                                // move tile left
-                                newstate.setTileAt(row, col - 1, tileId);
+                            // move tile left
+                            newStateString[idx - 1] = tileId;
 
-                                // replace with empty, unless part of tile extending rightward
-                                if (col >=context.width-1 || this.tileAt(row, col + 1) != tileId)
-                                {
-                                    // top of tile: replace with empty
-                                    newstate.setTileAt(row, col, EMPTY);
-                                }
-                                break;
+                            // replace with empty, unless part of tile extending rightward
+                            if (col >= context.width - 1 || stateString[idx + 1] != tileId)
+                            {
+                                // top of tile: replace with empty
+                                newStateString[idx] = EMPTY;
+                            }
+                            break;
 
-                            default:
-                                throw(new Exception("Invalid direction"));
-                        }
-
-                        ++tilesToMove;
+                        default:
+                            throw (new Exception("Invalid direction"));
                     }
+
+                    ++tilesToMove;
                 }
             }
 
             if (tilesToMove <= 0)
                 return null;
 
-			//if (tileId == '1' && (direction == LEFT || direction == RIGHT))
-			//	Console.WriteLine("moved tile 1: "+direction);
+            var newstate = new KlotskiState(context, new string(newStateString));
 
-			newstate.movedPiece = tileId;
+            newstate.movedPiece = tileId;
             newstate.movedPieceDirection = direction;
 			return newstate;
         }
