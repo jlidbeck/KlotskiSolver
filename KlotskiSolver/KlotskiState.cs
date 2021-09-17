@@ -274,6 +274,13 @@ namespace KlotskiSolverApplication
         // Renders the state to the console output
         public void writeToConsole(int cx, int cy)
         {
+            if(cy + context.height >= Console.BufferHeight)
+            {
+                // not enough room in buffer...
+                for (int i = 0; i < context.height; ++i)
+                    Console.WriteLine();
+            }
+
             var fg = Console.ForegroundColor;
             var bg = Console.BackgroundColor;
 
