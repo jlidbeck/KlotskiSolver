@@ -109,13 +109,13 @@ namespace KlotskiSolverApplication
         //  MoveCountComparer:
         //  This compare function guarantees that an optimal shortest-path solution is found,
         //  because shorter paths (by move count) are always given higher priority.
-        //  In case of tie, depth is used, giving priority to shorter tile movements.
+        //  In case of tie, depth is used, giving priority to *longer* tile movements.
         public class MoveCountComparer : IComparer<KlotskiState>
         {
             public int Compare(KlotskiState x, KlotskiState y)
             {
                 if (x.moveCount == y.moveCount)
-                    return x.depth - y.depth;
+                    return y.depth - x.depth;
                 return x.moveCount - y.moveCount;
             }
         }
@@ -399,29 +399,51 @@ namespace KlotskiSolverApplication
         //  States are unique: all returned states are non-isomorphic to each other, as well as to all historical states.
         public List<KlotskiState> getChildStates()
         {
-			if (_children != null)
-				return _children;
+            if (_children != null)
+                return _children;
 
+            findAllMoves();
+            return _children;
+        }
+
+        //  Computes all possible moves, without backtracking.
+        //  These are all unique moves of one or more squares.
+        private void findAllMoves()
+        {
             _children = new List<KlotskiState>();
 
-            // find all empty spaces;
-            // for each empty square, try all ways to fill it
+            var tileIds = stateString.Distinct();
 
-            for (int row = 0; row < context.height; ++row)
+            foreach (var tileId in tileIds)
             {
-                for (int col = 0; col < context.width; ++col)
+                var stack = new Stack<KlotskiState>();
+                stack.Push(this);
+
+                while (stack.Count() > 0)
                 {
-                    if (this.tileAt(row, col) == EMPTY)
+                    var state = stack.Pop();
+
+                    int countBefore = _children.Count();
+                    addChildIfNotBacktrack(state.moveTile(tileId, Direction.DOWN));
+                    addChildIfNotBacktrack(state.moveTile(tileId, Direction.RIGHT));
+                    addChildIfNotBacktrack(state.moveTile(tileId, Direction.UP));
+                    addChildIfNotBacktrack(state.moveTile(tileId, Direction.LEFT));
+                    for (; countBefore < _children.Count(); ++countBefore)
                     {
-                        addChildIfNotBacktrack(this.moveTileInto(row, col, Direction.DOWN));
-                        addChildIfNotBacktrack(this.moveTileInto(row, col, Direction.RIGHT));
-                        addChildIfNotBacktrack(this.moveTileInto(row, col, Direction.UP));
-                        addChildIfNotBacktrack(this.moveTileInto(row, col, Direction.LEFT));
+                        stack.Push(_children[countBefore]);
+                        _children[countBefore].depth = state.depth + 1;
                     }
                 }
             }
+            //Console.WriteLine($"Children: " + string.Join(", ", _children.Select(st => st.depth)));
 
-			return _children;
+            // heh
+            //foreach (var st in _children)
+            //    st.depth = st.moveCount;
+            // now we have a weird situation: this state might have multiple children for a tile move, in which some children
+            // have a greater depth than others, and could be considered children of one another.
+            // all will have the same move count.
+            // we must modify the search to prefer *greater* depth when move counts are equal..
         }
 
         public void detach()
