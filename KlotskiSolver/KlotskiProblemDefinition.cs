@@ -362,17 +362,30 @@ namespace KlotskiSolverApplication
                 // skipping states isomorphic to states in history or in the queue
                 foreach (var childState in children)
                 {
-/*                    if (visitedStates.ContainsKey(childState.canonicalString))
+                    if (visitedStates.ContainsKey(childState.canonicalString))
                     {
                         // If we have already visited this state, we know (due to the ordering of the priority queue) that we have
                         // already found a path to this state no longer than this one so we don't need to add this one to the search queue.
 
-                        Debug.Assert(childState.moveCount >= visitedStates[childState.canonicalString].moveCount);
+                        //Debug.Assert(childState.moveCount >= visitedStates[childState.canonicalString].moveCount);
+                        if(childState.moveCount < visitedStates[childState.canonicalString].moveCount)
+                        {
+                            // we've improved on an earlier solution
+                            // (this does not occur during true BFS search)
+
+                            for (var p = childState; p != null; p = p.parentState)
+                            {
+                                if (p.moveCount < visitedStates[p.canonicalString].moveCount)
+                                {
+                                    visitedStates[p.canonicalString] = p;
+                                }
+                            }
+                        }
 
                         ++searchContext.prunedBeforePush;
                         continue;
                     }
-*/
+
                     searchQueue.Push(childState);
 
                 }   // foreach(childState)
