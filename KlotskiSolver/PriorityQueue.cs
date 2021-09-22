@@ -27,6 +27,7 @@ namespace MS.Internal
     /// Push and Pop are each O(log N). Pushing N objects and them popping
     /// them all is equivalent to performing a heap sort and is O(N log N).
     /// </remarks>
+    [DebuggerDisplay("Count={Count}, Top={Top}, Type={typeof(T).Name}")]
     internal class PriorityQueue<T>
     {
         //

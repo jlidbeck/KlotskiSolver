@@ -6,6 +6,7 @@ using System.Diagnostics;
 
 namespace KlotskiSolverApplication
 {
+    [DebuggerDisplay("Start:{startState.stateString} Goal:{goalState.stateString}")]
     class KlotskiProblemDefinition
     {
         public string name { get; private set; } = null;
@@ -150,42 +151,142 @@ namespace KlotskiSolverApplication
         // search
         //
 
-        //  Searches for {startState.context.goalState} starting at {startState},
-        //  using a breadth-first search up to the given depth.
-        //  If a solution is found, returns a reference to the end state, which is isomorphic to the goal state.
-        //  The returned state has a linked-list path back to {startState} found by traversing KlotskiState.parent.
-        //
-        public KlotskiState search(KlotskiState startState, IComparer<KlotskiState> searchComparer, int depth)
+        [DebuggerDisplay("Solutions={solutionStates.Count}, Visited={visitedStates}, MaxDepth={maxDepthReached}")]
+        public class SearchContext
         {
+            public List<KlotskiState> solutionStates = new List<KlotskiState>();
+
+            // count of all states reached by the search
+            public int visitedStates { get; internal set; } = 0;
+
+            // count of all states reached, binned by moveCount
+            public List<int> visitedStatesByMoveCount = new List<int>();
+
+            // indicates that all reachable states (up to maximum depth) have been visited
+            public bool allStatesVisited { get; internal set; } = false;
+
+            // indicates the max depth reached by the search
+            public int maxDepthReached { get; internal set; } = 0;
+
+            // list of all states reached at the maximum moveCount seen so far
+            public List<KlotskiState> deepestStates = null;
+
+            // update {visitedStatesByMoveCount} and {deepestStates}
+            internal void incrementDepthCounter(KlotskiState state)
+            {
+                if (visitedStatesByMoveCount.Count() <= state.moveCount)
+                {
+                    // reached new depth: reset the deepest state list
+                    deepestStates = new List<KlotskiState>();
+
+                    // expand the bin counter list until we have at least {state.moveCount+1} bins
+                    while (visitedStatesByMoveCount.Count() <= state.moveCount)
+                        visitedStatesByMoveCount.Add(0);
+                }
+
+                visitedStatesByMoveCount[state.moveCount]++;
+                if (state.moveCount == visitedStatesByMoveCount.Count() - 1)
+                    deepestStates.Add(state);
+            }
+
+            // additional reporting for debugging
+            public int prunedAfterPop { get; internal set; } = 0;
+            public int prunedBeforePush { get; internal set; } = 0;
+        };
+
+        //  Finds all states at the greatest distance from any solution state
+        public SearchContext findDeepestStates(int depth)
+        {
+            // First, do a full graph traversal to find all reachable solution states
+            var searchResults = search(startState, new KlotskiState.MoveCountComparer(), depth, false);
+
+            if (searchResults == null)
+                return null;
+
+            Console.WriteLine();
+            Console.WriteLine($"*** BFS traversal complete: {searchResults?.solutionStates?.Count()} solution states found ***");
+            Console.WriteLine();
+
+            // Now reset and do a second traversal, starting with all the solution states.
+            // This guarantees a minimal moveCount is set on all reachable states.
+
+            // Each solution state node must be detached from the previous search's traversal tree
+            // so the next search starts fresh
+            foreach (var st in searchResults.solutionStates)
+            {
+                st.detach();
+            }
+
+            // Search 2: another full traversal with multiple start states
+            searchResults = search(searchResults.solutionStates, null, new KlotskiState.MoveCountComparer(), depth, false);
+
+            Console.WriteLine($"*** 2nd BFS traversal complete: {searchResults.deepestStates.Count()} states found with moveCount={searchResults.deepestStates.First().moveCount} ***");
+            Console.WriteLine();
+            return searchResults;
+        }
+
+        //  
+        //  For a full enumeration of shortest paths to all reachable states at depth {depth},
+        //  {searchComparer} should order states on depth, and {stopAtFirst} should be false.
+        //  If {stopAtFirst} is true:
+        //  Searches for {startState.context.goalState} starting at {startState}, using a breadth-first search up to the given depth.
+        //  The first solution found is returned.
+        //  If {stopAtFirst} is false:
+        //  A full traversal is done up to {depth}.
+        //  Solutions are returned as references to the end state. The end states have a linked-list path back to {startState}
+        //  which can be enumerated by traversing KlotskiState.parent.
+        //
+        public SearchContext search(KlotskiState startState, IComparer<KlotskiState> searchComparer, int depth, bool stopAtFirst)
+        {
+            var startStates = new List<KlotskiState>();
+            startStates.Add(startState);
+
+            // if a history was provided, add all previous states to the visited set
+            // not including the last state, which will be the start state for the search.
+            var excludeStates = new List<KlotskiState>();
+            for (var st = startState.parentState; st != null; st = st.parentState)
+            {
+                excludeStates.Add(st);
+            }
+
+            var searchResults = search(startStates, excludeStates, searchComparer, depth, stopAtFirst);
+            return searchResults;
+        }
+
+        public SearchContext search(IEnumerable<KlotskiState> startStates, IEnumerable<KlotskiState> excludeStates, IComparer<KlotskiState> searchComparer, int maxDepth, bool stopAtFirst)
+        {
+            Trace.Assert(startStates?.Count() > 0, "One or more start states required");
+
             // Keep track of all states visited to avoid backtracking or searching suboptimal paths.
-            // These are keyed as canonical strings, because we consider a state visited even if identical tiles
-            // are in exchanged positions.
+            // States are keyed as their canonical strings, because we consider a state visited even if identical tiles are exchanged.
             // We also store the complete state (as the value in the key/value pair), because this contains the
             // history.
 
             var visitedStates = new Dictionary<string, KlotskiState>();
 
+            var searchContext = new SearchContext();
+
             // if a history was provided, add all previous states to the visited set
             // not including the last state, which will be the start state for the search.
-            for (var st = startState.parentState; st != null; st = st.parentState)
+            if (excludeStates != null)
             {
-                visitedStates[st.canonicalString] = st;
+                foreach (var st in excludeStates)
+                {
+                    visitedStates[st.canonicalString] = st;
+                }
             }
 
             // search queue for width-first-search
             var searchQueue = new MS.Internal.PriorityQueue<KlotskiState>(0, searchComparer);
 
-            // starting state for search
-            searchQueue.Push(startState);
+            // starting states for search
+            foreach (var st in startStates)
+                searchQueue.Push(st);
 
-            int maxDepth = startState.depth + depth;
 
-            // for console reporting: report each time a new depth is reached
+            // for console reporting
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             long lastReport = -1000;
-
-            int pruneCount1 = 0;
-            int pruneCount2 = 0;
 
             //  Search loop
             //  Continues until goal state is found, or all reachable states have been reached
@@ -209,25 +310,52 @@ namespace KlotskiSolverApplication
                     Console.WriteLine($"Depth: {state.moveCount} / {state.depth} Queue:{searchQueue.Count} Visited:{visitedStates.Count()}");
                 }
 
+                // update maxDepthReached stat
+                if (state.depth > searchContext.maxDepthReached)
+                    searchContext.maxDepthReached = state.depth;
+
+                searchContext.visitedStates++;
+
+                // check for end conditions
+
                 if (state.matchesGoalState())
                 {
-                    Console.WriteLine($"Pruned: {pruneCount1}, {pruneCount2}");
-                    // Solution found: stop search
-                    return state;
+                    // Solution found
+                    searchContext.solutionStates.Add(state);
+
+                    if (stopAtFirst)
+                        return searchContext;
+
+                    // Note: though this is a solution state, we continue to add it to the search queue and
+                    // therefore we will be traversing paths that travel *through* the solution state.
+                    // This is necessary for a full BFS enumeration as it will prune other longer paths to the
+                    // same solution state.
                 }
 
-                if (state.depth > maxDepth)
+/*                if (state.depth > maxDepth)
                 {
                     continue;
                 }
+*/
 
                 if (visitedStates.ContainsKey(state.canonicalString))
                 {
-                    ++pruneCount1;
+                    ++searchContext.prunedAfterPop;
                     continue;
                 }
 
+                // {state} has now officially been visited: add to stats, history
+
                 visitedStates[state.canonicalString] = state;
+
+                searchContext.incrementDepthCounter(state);
+
+                if (state.depth >= maxDepth)
+                {
+                    continue;
+                }
+
+                // enumerate all child states and add to queue
 
                 List<KlotskiState> children = state.getChildStates();
 
@@ -242,7 +370,7 @@ namespace KlotskiSolverApplication
 
                         Debug.Assert(childState.moveCount >= visitedStates[childState.canonicalString].moveCount);
 
-                        ++pruneCount2;
+                        ++searchContext.prunedBeforePush;
                         continue;
                     }
 */
@@ -252,17 +380,18 @@ namespace KlotskiSolverApplication
 
             }   // while(queue not empty)
 
-            // all reachable states have been exhausted, with no solution found
-            return null;
+            searchContext.allStatesVisited = true;
+            return searchContext;
         }   // void search()
 
 
         //  Finds a random state {depth} steps from {startState}.
+        //  Shuffle is implemented as a random walk of length {depth} from {startState}, avoiding loops.
         //  This is nearly the search algorithm reversed, using a stack instead of a queue, for a depth-first search.
-        //  Longer paths are preferred, in fact, the first valid path of length {depth} without a loop is returned.
+        //  Longer paths are preferred. The first valid path of length {depth} without a loop is returned.
         //  The algorithm uses the same dist-sq heuristic used by the quick search. Here higher values are used to
         //  guide the search further from the {startState}.
-        public KlotskiState shuffle(KlotskiState startState, int depth)
+        public KlotskiState randomWalk(KlotskiState startState, int depth)
         {
             var random = new Random();
 
@@ -272,7 +401,7 @@ namespace KlotskiSolverApplication
 
             var visitedStates = new HashSet<string>();
 
-            // search queue for depth-first-search
+            // stack is used for depth-first-search
             var searchStack = new Stack<KlotskiState>();
 
             // starting state for search
@@ -311,8 +440,9 @@ namespace KlotskiSolverApplication
 
                 // add all children to stack, in some order.
 
-                // since this is a last-in-first-out stack, the same heuristic can be used in reverse
-                // to give priority to states further from the goal.
+                // use heuristic to prioritize states (presumably) further from the goal.
+                // since a stack is last-in-first-out, the same heuristic used in solution searches
+                // can be used here for the opposite effect, ordering near-goal states LATER in the search.
                 children.Sort(new KlotskiState.DistanceSquaredHeuristicComparer(random.Next(10), 2));
 
                 foreach (var childState in children)

@@ -10,6 +10,7 @@ namespace KlotskiSolverApplication
     //  States make up a tree data structure, with each state linked to its parent state
     //  and potentially multiple child states.
 
+    [DebuggerDisplay("{stateString} [{movedPiece.ToString()} {movedPieceDirection}] Move={moveCount} Depth={depth}")]
     class KlotskiState
     {
         public const char EMPTY = ' ';
@@ -68,12 +69,9 @@ namespace KlotskiSolverApplication
         //  Allows functionality such as Array.IndexOf, etc.
         public override bool Equals(object obj)
         {
-            if (!(obj is KlotskiState))
-                throw (new Exception("Objects not same type"));
-
             KlotskiState state = obj as KlotskiState;
 
-            return (state.stateString.Equals(this.stateString));
+            return (this.stateString.Equals(state?.stateString));
         }
 
         //  Returns true if this state is equivalent to {state},
@@ -101,7 +99,7 @@ namespace KlotskiSolverApplication
 
         #region Comparers
 
-        //  Comparers useful for priority queues or Sort functions.
+        //  Comparers used by priority queues, stacks, Sort, etc.
 
         //  MoveCountComparer:
         //  This compare function guarantees that an optimal shortest-path solution is found,
@@ -268,6 +266,45 @@ namespace KlotskiSolverApplication
             Console.ForegroundColor = fg;
         }
 
+        // Renders the state to the console output
+        public void writeToConsole(int cx, int cy)
+        {
+            var fg = Console.ForegroundColor;
+            var bg = Console.BackgroundColor;
+
+            Console.ForegroundColor = ConsoleColor.Black;
+
+            // only print each tile ID char once
+            var tileIdsPrinted = new HashSet<char>();
+
+            for (int row = 0; row < context.height; ++row)
+            {
+                Console.CursorLeft = cx;
+                Console.CursorTop = cy + row;
+
+                for (int col = 0; col < context.width; ++col)
+                {
+                    char tileId = this.tileAt(row, col);
+
+                    Console.BackgroundColor = context.tileIdToColorMap[tileId];
+                    if (tileIdsPrinted.Contains(tileId))
+                    {
+                        Console.Write("  ");
+                    }
+                    else
+                    {
+                        tileIdsPrinted.Add(tileId);
+                        Console.Write(tileId);
+                        Console.Write(' ');
+                    }
+                }
+                Console.BackgroundColor = ConsoleColor.Black;
+            }
+
+            Console.BackgroundColor = bg;
+            Console.ForegroundColor = fg;
+        }
+
         public string getHistoryString()
         {
             char tileId = '\0';
@@ -306,7 +343,7 @@ namespace KlotskiSolverApplication
         }
 
         //
-
+        /*
 		public int countReachableStates(int maxMoves)
 		{
 			int count = 1;
@@ -345,7 +382,7 @@ namespace KlotskiSolverApplication
 
             return states;
         }
-
+        */
         //  Returns list of all reachable states one move away.
         //  States are unique: all returned states are non-isomorphic to each other, as well as to all historical states.
         public List<KlotskiState> getChildStates()
@@ -375,15 +412,24 @@ namespace KlotskiSolverApplication
 			return _children;
         }
 
+        public void detach()
+        {
+            _children = null;
+            parentState = null;
+            depth = 0;
+            moveCount = 0;
+            movedPiece = '\0';
+        }
+
         public void clearChildStates()
         {
             _children = null;
         }
 
         /**
-         * adds child to _children, unless
-         *  - child is null
-         *  - child is duplicate of another element in _children
+         * adds child to this._children, unless:
+         *  - child is null, or
+         *  - child is exact duplicate of another element in _children, or
          *  - child is isomorphic to a direct ancestor
          **/
         private void addChildIfNotBacktrack(KlotskiState child)
@@ -391,15 +437,14 @@ namespace KlotskiSolverApplication
             if (child == null)
                 return;
 
-            if (_children.IndexOf(child) >= 0)
+            if (_children.FindIndex(st => st.stateString == child.stateString) >= 0)
                 return;
 
-            KlotskiState p = parentState;
-            while (p != null)
+            // Check history--if child is isomorphic to any previous state, do not add
+            for (KlotskiState p = parentState; p != null; p = p.parentState)
             {
                 if (p.isIsomorphicTo(child))
                     return;
-                p = p.parentState;
             }
 
             child.depth = this.depth + 1;

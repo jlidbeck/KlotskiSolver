@@ -358,7 +358,7 @@ namespace KlotskiSolverApplication
                 else if (key.Key == ConsoleKey.F8)
                 {
                     // shuffle current state, with no history
-                    var shuffleState = pd.shuffle(state.clone(), 1000);
+                    var shuffleState = pd.randomWalk(state.clone(), 1000);
                     if (shuffleState != null)
                     {
                         // this drops any existing history
@@ -367,49 +367,123 @@ namespace KlotskiSolverApplication
                 }
                 else if (key.Key == ConsoleKey.Enter)
                 {
-                    Console.WriteLine("Search:\n    [1] DistSqHeuristic (fast)\n     2  MoveCount BFS (slow, finds best solution)\n");
+                    Console.WriteLine("Search:\n    [1] DistSqHeuristic (fast, finds 1 solution)");
+                    Console.WriteLine("     2  MoveCount BFS (slow, finds 1 solution with min moves)");
+                    Console.WriteLine("     3  Complete BFS search (finds all solutions)");
+                    Console.WriteLine("     4  Deepest state search (finds all states furthest from any goal state)");
                     var c = Console.ReadKey();
                     IComparer<KlotskiState> searchComparer;
+                    bool deepStateSearch = false;
+                    bool stopAtFirst = true;
                     switch (c.KeyChar)
                     {
+                        default:
+                        case '1':
+                            searchComparer = new KlotskiState.DistanceSquaredHeuristicComparer(7, 2);
+                            break;
+
                         case '2':
                             searchComparer = new KlotskiState.MoveCountComparer();
                             break;
-                        default:
-                            searchComparer = new KlotskiState.DistanceSquaredHeuristicComparer(7, 2);
+
+                        case '3':
+                            searchComparer = new KlotskiState.MoveCountComparer();
+                            stopAtFirst = false;
+                            break;
+
+                        case '4':
+                            searchComparer = new KlotskiState.MoveCountComparer();
+                            stopAtFirst = false;
+                            deepStateSearch = true;
                             break;
                     }
-                    int searchDepth = 100;
+                    int searchDepth = 200;
                     Console.Write($"\nSearch depth [{searchDepth}]: ");
                     var str = Console.ReadLine();
                     if (!int.TryParse(str, out searchDepth))
-                        searchDepth = 100;
+                        searchDepth = 200;
 
-                    Console.WriteLine($"\nStarting search: {searchComparer} depth={searchDepth} from state {state.depth}");
+                    Console.WriteLine($"\nStarting search: {searchComparer} Depth={searchDepth} from state {state.depth} Deep={deepStateSearch}");
 
-                    state.clearChildStates();   // force new search
+                    state.detach();   // force new search
+
+                    KlotskiProblemDefinition.SearchContext searchResults = null;
 
                     try
                     {
                         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-                        KlotskiState searchResult = pd.search(state, searchComparer, searchDepth);
+                        if(deepStateSearch)
+                            searchResults = pd.findDeepestStates(searchDepth);
+                        else
+                            searchResults = pd.search(state, searchComparer, searchDepth, stopAtFirst);
                         stopwatch.Stop();
 
+                        Console.ForegroundColor = ConsoleColor.Green;
                         Console.WriteLine($"Search time: {stopwatch.Elapsed}");
-
-                        if (searchResult == null)
-                        {
-                            Console.WriteLine("No solution found.");
-                        }
-                        else
-                        {
-                            // add search history to UI history
-                            endState = state = searchResult;
-                        }
+                        Console.ResetColor();
                     }
                     catch (Exception err)
                     {
                         Console.WriteLine($"Error: {err.Message}");
+                    }
+
+
+                    if (searchResults == null)
+                    {
+                        Console.WriteLine("Search was interrupted.");
+                        continue;
+                    }
+
+
+                    // logging: don't include in release
+                    if (searchResults?.allStatesVisited == true)
+                    {
+                        Console.WriteLine("Depth  Reachable States");
+                        for (int i = 0; i < searchResults.visitedStatesByMoveCount.Count(); ++i)
+                        {
+                            Console.WriteLine($"{i,6} {searchResults.visitedStatesByMoveCount[i],10}");
+                        }
+                    }
+                    Console.WriteLine($"Pruned: {searchResults.prunedAfterPop}, {searchResults.prunedBeforePush}");
+                    Console.WriteLine(
+                        $"Solutions found: {searchResults.solutionStates.Count()}   " +
+                        $"States visited: {searchResults.visitedStates}   " +
+                        $"Max depth reached: {searchResults.maxDepthReached}   " +
+                        $"All states visited: {(searchResults.allStatesVisited ? "YES" : "NO")}");
+
+
+                    if (deepStateSearch)
+                    {
+                        if (searchResults.deepestStates.Count() > 0)
+                        {
+                            Console.WriteLine("Select a deepest state:");
+                            endState = state = selectState(searchResults.deepestStates);
+                        }
+                        else
+                        {
+                            // this shouldn't happen--indicates no states were searched at all
+                            Console.WriteLine("No deepest states found. This probably indicates a parameter error.");
+                        }
+                    }
+                    else
+                    {
+                        if (searchResults.solutionStates.Count() == 1)
+                        {
+                            // add search history to UI history
+                            endState = state = searchResults.solutionStates.First();
+                        }
+                        else if (searchResults.solutionStates.Count() > 1)
+                        {
+                            Console.WriteLine($"{searchResults.solutionStates.Count()} solutions found. " +
+                                $"MoveCount={searchResults.solutionStates.Min(st => st.moveCount)}..{searchResults.solutionStates.Max(st => st.moveCount)} " +
+                                $"Depth={searchResults.solutionStates.Min(st => st.depth)}..{searchResults.solutionStates.Max(st => st.depth)}");
+                            searchResults.solutionStates.Sort(new KlotskiState.MoveCountComparer());
+                            endState = state = selectState(searchResults.solutionStates);
+                        }
+                        else
+                        {
+                            Console.WriteLine("No results found.");
+                        }
                     }
                 }
                 else
@@ -455,7 +529,62 @@ namespace KlotskiSolverApplication
 
         }
 
+        //  Displays all states, then prompts user to select one
+        static KlotskiState selectState(IEnumerable<KlotskiState> solutionStates)
+        {
+            if (solutionStates.Count() == 0)
+                return null;
 
+            writeStatesToConsole(solutionStates);
+
+            Console.Write($"Select solution (0-{solutionStates.Count() - 1}) [0]: ");
+
+            var line = Console.ReadLine();
+            int idx;
+            if (int.TryParse(line, out idx))
+                return solutionStates.ElementAt(idx);
+            return solutionStates.First();
+        }
+
+        static void writeStatesToConsole(IEnumerable<KlotskiState> results)
+        {
+            if (results.Count() == 0) 
+                return;
+
+            int cx = 1;
+            var cy = Console.CursorTop;
+            int x = cx, y = cy;
+            for (int i = 0; i < results.Count(); ++i)
+            {
+                var state = results.ElementAt(i);
+                var pd = state.context;
+
+                Console.BackgroundColor = ConsoleColor.Black;
+                Console.ForegroundColor = ConsoleColor.White;
+                Console.CursorLeft = x;
+                Console.CursorTop = y;
+                Console.Write($"{i} {state.moveCount}");
+
+                state.writeToConsole(x, y + 1);
+
+                if ((x += pd.width * 2 + 1) > Console.WindowWidth - pd.width * 2)
+                {
+                    // end of line
+
+                    x = cx;
+                    y += (pd.height + 1);
+
+                    // wait for key input, ESC to terminate
+                    if (Console.ReadKey(true).Key == ConsoleKey.Escape)
+                        break;
+                }
+            }
+            /*                    Console.CursorLeft = cx;
+                                Console.CursorTop = cy;
+            */
+            Console.WriteLine();
+            Console.WriteLine();
+        }
 
     }
 }
