@@ -245,15 +245,14 @@ namespace KlotskiSolverApplication
                     Console.WriteLine();
                     Console.WriteLine("    1-9:      Apply move. Only unique moves are listed--those that do not repeat a previous state.");
                     Console.WriteLine("    a-z, A-Z: Move specified tile if there is a unique move. If multiple moves are listed, first move is made.");
-                    Console.WriteLine("    Ctrl+Z:   Backtrack");
-                    Console.WriteLine("    Ctrl+Y:   Retrack");
-                    Console.WriteLine("    HOME:     Rewind to start state, preserving history");
+                    Console.WriteLine("    , Ctrl+Z: Step back");
+                    Console.WriteLine("    . Ctrl+Y: Step forward");
+                    Console.WriteLine("    HOME:     Rewind to start state");
                     Console.WriteLine("    END:      Forward to last state");
-                    Console.WriteLine("    ENTER:    Search from current state");
+                    Console.WriteLine("    ENTER:    Search");
                     Console.WriteLine("    F2:       Display history");
                     Console.WriteLine("    F3:       Animate history");
                     Console.WriteLine("    F5:       Restart this puzzle");
-                    Console.WriteLine("    F6:       Go to goal state and drop history");
                     Console.WriteLine("    F7:       Drop history");
                     Console.WriteLine("    F8:       Shuffle");
                     Console.WriteLine("    Ctrl+O:   Open puzzle menu");
@@ -344,11 +343,6 @@ namespace KlotskiSolverApplication
                 else if (key.Key == ConsoleKey.F5)
                 {
                     restartNeeded = true;
-                }
-                else if (key.Key == ConsoleKey.F6)
-                {
-                    // create a goal state with no history
-                    state = endState = state.context.goalState.clone();
                 }
                 else if (key.Key == ConsoleKey.F7)
                 {
@@ -448,7 +442,7 @@ namespace KlotskiSolverApplication
                     Console.WriteLine(
                         $"Solutions found: {searchResults.solutionStates.Count()}   " +
                         $"States visited: {searchResults.visitedStates}   " +
-                        $"Max depth reached: {searchResults.maxDepthReached}   " +
+                        $"Max depth reached: {searchResults.maxMovesReached} / {searchResults.maxDepthReached}   " +
                         $"All states visited: {(searchResults.allStatesVisited ? "YES" : "NO")}");
 
 

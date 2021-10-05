@@ -154,7 +154,7 @@ namespace KlotskiSolverApplication
         [DebuggerDisplay("Solutions={solutionStates.Count}, Visited={visitedStates}, MaxDepth={maxDepthReached}")]
         public class SearchContext
         {
-            public List<KlotskiState> solutionStates = new List<KlotskiState>();
+            public readonly List<KlotskiState> solutionStates = new List<KlotskiState>();
 
             // count of all states reached by the search
             public int visitedStates { get; internal set; } = 0;
@@ -167,6 +167,9 @@ namespace KlotskiSolverApplication
 
             // indicates the max depth reached by the search
             public int maxDepthReached { get; internal set; } = 0;
+
+            // indicates the max moves reached by the search
+            public int maxMovesReached { get; internal set; } = 0;
 
             // list of all states reached at the maximum moveCount seen so far
             public List<KlotskiState> deepestStates = null;
@@ -253,7 +256,7 @@ namespace KlotskiSolverApplication
             return searchResults;
         }
 
-        public SearchContext search(IEnumerable<KlotskiState> startStates, IEnumerable<KlotskiState> excludeStates, IComparer<KlotskiState> searchComparer, int maxDepth, bool stopAtFirst)
+        public SearchContext search(IEnumerable<KlotskiState> startStates, IEnumerable<KlotskiState> excludeStates, IComparer<KlotskiState> searchComparer, int maxMoves, bool stopAtFirst)
         {
             Trace.Assert(startStates?.Count() > 0, "One or more start states required");
 
@@ -313,6 +316,8 @@ namespace KlotskiSolverApplication
                 // update maxDepthReached stat
                 if (state.depth > searchContext.maxDepthReached)
                     searchContext.maxDepthReached = state.depth;
+                if (state.moveCount > searchContext.maxMovesReached)
+                    searchContext.maxMovesReached = state.moveCount;
 
                 searchContext.visitedStates++;
 
@@ -332,12 +337,6 @@ namespace KlotskiSolverApplication
                     // same solution state.
                 }
 
-/*                if (state.depth > maxDepth)
-                {
-                    continue;
-                }
-*/
-
                 if (visitedStates.ContainsKey(state.canonicalString))
                 {
                     ++searchContext.prunedAfterPop;
@@ -350,7 +349,7 @@ namespace KlotskiSolverApplication
 
                 searchContext.incrementDepthCounter(state);
 
-                if (state.depth >= maxDepth)
+                if (state.moveCount >= maxMoves)
                 {
                     continue;
                 }
