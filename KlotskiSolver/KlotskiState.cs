@@ -6,11 +6,19 @@ using System.Diagnostics;
 
 namespace KlotskiSolverApplication
 {
+    //  Represents a board state of a specific KlotskiProblemDefinition.
+    //  States make up a tree data structure, with each state linked to its parent state
+    //  and potentially multiple child states.
+
+    [DebuggerDisplay("{stateString} [{movedPiece.ToString()} {movedPieceDirection}] Move={moveCount} Depth={depth}")]
     class KlotskiState
     {
         public const char EMPTY = ' ';
 
+        // serialized state descriptor
         public String stateString { get; private set; } = null;
+
+        // serialized state descriptor with tile IDs replaced with type IDs
         String _canonicalString = null;
 
 		// data structure
@@ -18,31 +26,52 @@ namespace KlotskiSolverApplication
 		public KlotskiState parentState { get; private set; } = null;
 		List<KlotskiState> _children = null;
 
+		// number of steps from startState
+        public int depth { get; private set; } = 0;
+
         // piece move count. this can be less than {depth} because consecutive moves of the same tile are only counted once
         public int moveCount { get; private set; } = 0;
         
+        // data describing the move transforming parent state to this state
 		public char movedPiece { get; private set; } = '\0';
         public enum Direction { DOWN=1, RIGHT=2, UP=3, LEFT=4 };
         public Direction movedPieceDirection { get; private set; }
 
-        public KlotskiState(KlotskiProblemDefinition context, String sz)
+
+        #region Construction
+
+        public KlotskiState(KlotskiProblemDefinition context, String stateString)
         {
-            Trace.Assert(sz.Length == context.width * context.height,
+            Trace.Assert(context != null, "Context cannot be null");
+            Trace.Assert(stateString != null && stateString.Length == context.width * context.height,
                         "Invalid state string: string length must be equal to width x height");
+
             this.context = context;
-            stateString = sz;
+            this.stateString = stateString;
+        }
+
+        //  Creates an orphan state object, without a history
+        public KlotskiState clone()
+        {
+            return new KlotskiState(context, stateString);
+        }
+
+        #endregion
+
+        #region Comparison
+
+        public override int GetHashCode()
+        {
+            return stateString.GetHashCode();
         }
 
         //  Comparison override: true if states are identical (not just isomorphic)
         //  Allows functionality such as Array.IndexOf, etc.
         public override bool Equals(object obj)
         {
-            if (!(obj is KlotskiState))
-                throw (new Exception("Objects not same type"));
-
             KlotskiState state = obj as KlotskiState;
 
-            return (state.stateString.Equals(this.stateString));
+            return (this.stateString.Equals(state?.stateString));
         }
 
         //  Returns true if this state is equivalent to {state},
@@ -66,10 +95,116 @@ namespace KlotskiSolverApplication
             }
         }
 
-		public override int GetHashCode()
-		{
-			return stateString.GetHashCode();
-		}
+        #endregion
+
+        #region Comparers
+
+        //  Comparers used by priority queues, stacks, Sort, etc.
+
+        //  MoveCountComparer:
+        //  This compare function guarantees that an optimal shortest-path solution is found,
+        //  because shorter paths (by move count) are always given higher priority.
+        //  In case of tie, depth is used, giving priority to shorter tile movements.
+        public class MoveCountComparer : IComparer<KlotskiState>
+        {
+            public int Compare(KlotskiState x, KlotskiState y)
+            {
+                if (x.moveCount == y.moveCount)
+                    return x.depth - y.depth;
+                return x.moveCount - y.moveCount;
+            }
+        }
+
+        //  DistanceSquaredHeuristicComparer
+        //  This heuristic comparison function estimates the distance from the goal state using the sum of the
+        //  distance squared for each tile cell specified in the goal state. It is not guaranteed to find an
+        //  optimal solution, but it will probably find a solution much faster.
+        //  Note that for best performance a larger depth cutoff should be used, well more than the minimum.
+        //  This comparer does especially well when the goal state specifies multiple tiles, such as the 15-slider
+        //  puzzle.
+        //  The move count is given some weight, to help avoid getting stuck in local minima.
+        //
+        public class DistanceSquaredHeuristicComparer : IComparer<KlotskiState>
+        {
+            public int distSqWeight { get; private set; } = 7;
+            public int moveCountWeight { get; private set; } = 2;
+
+            public DistanceSquaredHeuristicComparer(int distSqWeight, int moveCountWeight)
+            {
+                this.distSqWeight = distSqWeight;
+                this.moveCountWeight = moveCountWeight;
+            }
+
+            public override string ToString()
+            {
+                return $"DistanceSquaredHeuristic {distSqWeight}/{moveCountWeight}";
+            }
+
+            public int Compare(KlotskiState x, KlotskiState y)
+            {
+                return distSqWeight    * ( x.getDistanceSquareScore() - y.getDistanceSquareScore() )
+                     + moveCountWeight * ( x.moveCount                - y.moveCount                );
+            }
+        }
+
+        #endregion
+
+        #region Goal state checking / heuristics
+
+        //  Determine whether this state satisfies {goalState}, that is,
+        //  all non-blank values in {goalStateString} match values in this.stateString.
+        public bool matchesGoalState()
+        {
+            var goal = context.goalState.stateString;
+            for (int i = 0; i < goal.Length; ++i)
+            {
+                if (goal[i] != ' ' && this.stateString[i] != goal[i])
+                    return false;
+            }
+
+            return true;
+        }
+
+        //  Estimate distance for all tiles indicated in goal state.
+        //  Lower scores indicate this state is expected to be closer to the goal state.
+        public int getDistanceSquareScore()
+        {
+            int diffCount = 0;
+            var goal = context.goalState.stateString;
+
+            // for each non-blank in the goal state..
+            for (int i = 0; i < goal.Length; ++i)
+            {
+                char c = goal[i];
+                if (c == ' ') continue;
+
+                // find the nearest matching square (by Euclidean distance)
+
+                int ix = i % context.width;
+                int iy = i / context.width;
+
+                int minDist = int.MaxValue;
+                for (int j = 0; j < stateString.Length; ++j)
+                {
+                    if (stateString[j] == c)
+                    {
+                        int jx = j % context.width;
+                        int jy = j / context.width;
+                        int dist = (ix - jx) * (ix - jx) + (iy - jy) * (iy - jy);
+                        if (dist < minDist)
+                            minDist = dist;
+                    }
+                }
+
+                diffCount += minDist;
+            }
+
+            return diffCount;
+        }
+
+        #endregion
+
+        #region serialization
 
         public override string ToString()
         {
@@ -81,25 +216,22 @@ namespace KlotskiSolverApplication
             return sz.ToString();
         }
 
+        public List<string> ToStrings()
+        {
+            var asz = new List<string>();
+            for (int row = 0; row < context.height; ++row)
+            {
+                asz.Add(stateString.Substring(row * context.width, context.width));
+            }
+            return asz;
+        }
+
+
+        // Renders the state to the console output
         public void write()
         {
-            var colors = new ConsoleColor[15] {
-                ConsoleColor.White,
-                ConsoleColor.Yellow,
-                ConsoleColor.Magenta,
-                ConsoleColor.Red,
-                ConsoleColor.Cyan,
-                ConsoleColor.Green,
-                ConsoleColor.Blue,
-                ConsoleColor.DarkGray,
-                ConsoleColor.Gray,
-                ConsoleColor.DarkYellow,
-                ConsoleColor.DarkMagenta,
-                ConsoleColor.DarkRed,
-                ConsoleColor.DarkCyan,
-                ConsoleColor.DarkGreen,
-                ConsoleColor.DarkBlue
-                };
+            var fg = Console.ForegroundColor;
+            var bg = Console.BackgroundColor;
 
             Console.ForegroundColor = ConsoleColor.Black;
 
@@ -113,14 +245,8 @@ namespace KlotskiSolverApplication
                 for (int col = 0; col < context.width; ++col)
                 {
                     char tileId = this.tileAt(row, col);
-                    ConsoleColor color = ConsoleColor.Black;
-                    if (tileId >= 'a' && tileId <= 'z')
-                        color = colors[(tileId - 'a') % 15];
-                    else if (tileId >= 'A' && tileId <= 'Z')
-                        color = colors[(tileId - 'A') % 15];
-                    else if (tileId >= '0' && tileId <= '9')
-                        color = colors[(tileId - '0') % 15];
-                    Console.BackgroundColor = color;
+
+                    Console.BackgroundColor = context.tileIdToColorMap[tileId];
                     if (tileIdsPrinted.Contains(tileId))
                     {
                         Console.Write("  ");
@@ -136,10 +262,65 @@ namespace KlotskiSolverApplication
                 Console.WriteLine();
             }
 
-            Console.BackgroundColor = ConsoleColor.Black;
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine("Depth: " + depth + " Moves: " + moveCount);
+            Console.BackgroundColor = bg;
+            Console.ForegroundColor = fg;
         }
+
+        // Renders the state to the console output
+        public void writeToConsole(int cx, int cy)
+        {
+            var fg = Console.ForegroundColor;
+            var bg = Console.BackgroundColor;
+
+            Console.ForegroundColor = ConsoleColor.Black;
+
+            // only print each tile ID char once
+            var tileIdsPrinted = new HashSet<char>();
+
+            for (int row = 0; row < context.height; ++row)
+            {
+                Console.CursorLeft = cx;
+                Console.CursorTop = cy + row;
+
+                for (int col = 0; col < context.width; ++col)
+                {
+                    char tileId = this.tileAt(row, col);
+
+                    Console.BackgroundColor = context.tileIdToColorMap[tileId];
+                    if (tileIdsPrinted.Contains(tileId))
+                    {
+                        Console.Write("  ");
+                    }
+                    else
+                    {
+                        tileIdsPrinted.Add(tileId);
+                        Console.Write(tileId);
+                        Console.Write(' ');
+                    }
+                }
+                Console.BackgroundColor = ConsoleColor.Black;
+            }
+
+            Console.BackgroundColor = bg;
+            Console.ForegroundColor = fg;
+        }
+
+        public string getHistoryString()
+        {
+            char tileId = '\0';
+            string sz = "" + movedPiece;
+            for (var i = parentState; i != null && i.movedPiece != '\0'; i = i.parentState)
+            {
+                if (i.movedPiece != tileId)
+                {
+                    tileId = i.movedPiece;
+                    sz = "" + i.movedPiece + sz;
+                }
+            }
+            return sz;
+        }
+
+        #endregion
 
         public char tileAt(int row, int col)
         {
@@ -161,14 +342,9 @@ namespace KlotskiSolverApplication
             _children = null;
         }
 
-        protected KlotskiState clone()
-        {
-            return new KlotskiState(context, stateString);
-        }
-
         //
-
-		public int countPossibleConfigurations(int maxMoves)
+        /*
+		public int countReachableStates(int maxMoves)
 		{
 			int count = 1;
 			if (maxMoves > 0)
@@ -176,37 +352,37 @@ namespace KlotskiSolverApplication
 				List<KlotskiState> children = this.getChildStates();
 				foreach (KlotskiState state in children)
 				{
-					count += state.countPossibleConfigurations(maxMoves - 1);
+					count += state.countReachableStates(maxMoves - 1);
 				}
 			}
 			return count;
 		}
 
-        public List<KlotskiState> getPossibleConfigurations(int maxMoves)
+        public List<KlotskiState> findUniqueReachableStates(int maxMoves)
         {
-            List<KlotskiState> a = new List<KlotskiState>();
-            a.Add(this);
+            var states = new List<KlotskiState>();
+            states.Add(this);
 
-            int i=0;
-            while(maxMoves>0 && i<a.Count)
+            int i = 0;
+            while (maxMoves > 0 && i < states.Count)
             {
                 // grab next item in queue
-                KlotskiState state=a[i];
+                KlotskiState state = states[i];
                 ++i;
 
-                List<KlotskiState> a2=state.getChildStates();
-                foreach(KlotskiState newstate in a2)
+                List<KlotskiState> a2 = state.getChildStates();
+                foreach (KlotskiState newstate in a2)
                 {
-                    if(a.IndexOf(newstate)<0)
-                        a.Add(newstate);
+                    if (states.IndexOf(newstate) < 0)
+                        states.Add(newstate);
                 }
 
                 --maxMoves;
             }
 
-            return a;
+            return states;
         }
-
+        */
         //  Returns list of all reachable states one move away.
         //  States are unique: all returned states are non-isomorphic to each other, as well as to all historical states.
         public List<KlotskiState> getChildStates()
@@ -236,52 +412,51 @@ namespace KlotskiSolverApplication
 			return _children;
         }
 
+        public void detach()
+        {
+            _children = null;
+            parentState = null;
+            depth = 0;
+            moveCount = 0;
+            movedPiece = '\0';
+        }
+
+        public void clearChildStates()
+        {
+            _children = null;
+        }
+
         /**
-         * adds child to _children, unless
-         *  - child is null
-         *  - child is duplicate of direct ancestor
-         *  - child is duplicate of another element in _children
-         *  where isomorphic states are considered duplicates.
+         * adds child to this._children, unless:
+         *  - child is null, or
+         *  - child is exact duplicate of another element in _children, or
+         *  - child is isomorphic to a direct ancestor
          **/
         private void addChildIfNotBacktrack(KlotskiState child)
         {
             if (child == null)
                 return;
 
-            if (_children.IndexOf(child) >= 0)
+            if (_children.FindIndex(st => st.stateString == child.stateString) >= 0)
                 return;
 
-            KlotskiState p = parentState;
-            while (p != null)
+            // Check history--if child is isomorphic to any previous state, do not add
+            for (KlotskiState p = parentState; p != null; p = p.parentState)
             {
-                //if (p.Equals(child))
                 if (p.isIsomorphicTo(child))
                     return;
-                p = p.parentState;
             }
+
+            child.depth = this.depth + 1;
 
             child.moveCount = this.moveCount;
             if (child.movedPiece != this.movedPiece)
                 ++child.moveCount;
 
             child.parentState = this;
+
             _children.Add(child);
         }
-
-		public int depth
-		{
-			get
-			{
-				int d = 0;
-				KlotskiState p = this.parentState;
-				while (p != null)
-				{
-					++d;
-					p = p.parentState;
-				}
-				return d;
-			}
-		}
 
         private void replaceTile(string tileId, string newId)
         {
