@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Diagnostics;
 
 namespace KlotskiSolverApplication
@@ -16,19 +15,25 @@ namespace KlotskiSolverApplication
 
         public KlotskiState goalState  { get; private set; }        // Goal state. Blanks are wildcards; all other values must be matched.
         public KlotskiState startState { get; private set; }
-        public Dictionary<char, char>         tileIdToTypeMap  { get; private set; }    // Maps tile IDs to type IDs
-        public Dictionary<char, ConsoleColor> tileIdToColorMap { get; private set; }
+        public Dictionary<char, char>         tileTypeIdMap { get; private set; }
+        public Dictionary<char, ConsoleColor> tileColorMap  { get; private set; }
 
         public int goalMoves { get; private set; } = 100;
 
         //  Initializes a problem definition.
-        //  Start and goal states are provided as strings of length width x height representing a 2D array of spaces and
-        //  tile ID char values and spaces.
-        //  isomorphicTileGroups: defines which tiles are considered identical for the purpose of comparing states.
+        //  Start and goal states are provided as strings of length width x height representing a 2D array of
+        //  case-sensitive tile IDs and spaces.
+        //  isomorphicTileGroups: defines which tiles are considered interchangeable for the purpose of comparing states.
         //  This string is a space-separated list of strings where each string is a set of tile IDs.
         //  e.g. "ABC IJ" indicates that tiles A, B, and C are identical, tiles I and J are identical, and any other tiles
         //  are unique.
-        public KlotskiProblemDefinition(string name, int goalMoves, int width, int height, string szStartState, string szGoalState, string isomorphicTileGroups)
+        public KlotskiProblemDefinition(
+            string name, 
+            int goalMoves, 
+            int width, int height, 
+            string startState, 
+            string goalState, 
+            string isomorphicTileGroups)
         {
             Trace.Assert(width > 0 && height > 0, "Invalid problem definition size");
 
@@ -36,8 +41,8 @@ namespace KlotskiSolverApplication
             this.goalMoves = goalMoves;
             this.width = width;
             this.height = height;
-            this.goalState = new KlotskiState(this, szGoalState);
-            this.startState = new KlotskiState(this, szStartState);
+            this.goalState = new KlotskiState(this, goalState);
+            this.startState = new KlotskiState(this, startState);
 
             parseTileIdTypeGroups(isomorphicTileGroups);
             initializeColors();
@@ -71,7 +76,7 @@ namespace KlotskiSolverApplication
 
         private void parseTileIdTypeGroups(string isomorphicTiles)
         {
-            tileIdToTypeMap = new Dictionary<char, char>();
+            tileTypeIdMap = new Dictionary<char, char>();
 
             char typeId = '0';
             var groups = isomorphicTiles.Split(' ');
@@ -82,13 +87,13 @@ namespace KlotskiSolverApplication
                 for (++typeId; startState.stateString.IndexOf(typeId) >= 0; ++typeId) ;
 
                 foreach (var tileId in group)
-                    tileIdToTypeMap[tileId] = typeId;
+                    tileTypeIdMap[tileId] = typeId;
             }
         }
 
         private void initializeColors()
         {
-            tileIdToColorMap = new Dictionary<char, ConsoleColor>();
+            tileColorMap = new Dictionary<char, ConsoleColor>();
 
             // cycle thru these 15 colors.
             // the first tile ID (by ASCII value) is assigned the color white.
@@ -111,7 +116,7 @@ namespace KlotskiSolverApplication
                 ConsoleColor.Yellow,
                 };
 
-            tileIdToColorMap[' '] = ConsoleColor.Black;
+            tileColorMap[' '] = ConsoleColor.Black;
 
             // get all unique tileIDs, sorted
             var tileIds = startState.stateString.Distinct().ToArray();
@@ -120,9 +125,9 @@ namespace KlotskiSolverApplication
             int colorIdx = 0;
             foreach (var c in tileIds)
             {
-                if (!tileIdToColorMap.ContainsKey(c))
+                if (!tileColorMap.ContainsKey(c))
                 {
-                    tileIdToColorMap[c] = colors[colorIdx];
+                    tileColorMap[c] = colors[colorIdx];
                     if (++colorIdx == colors.Length)
                     {
                         colorIdx = 1;
@@ -137,9 +142,9 @@ namespace KlotskiSolverApplication
             char[] sz = state.ToCharArray();
             for (int i = 0; i < state.Length; ++i)
             {
-                if (tileIdToTypeMap.ContainsKey(state[i]))
+                if (tileTypeIdMap.ContainsKey(state[i]))
                 {
-                    sz[i] = tileIdToTypeMap[state[i]];
+                    sz[i] = tileTypeIdMap[state[i]];
                 }
             }
 
@@ -236,7 +241,8 @@ namespace KlotskiSolverApplication
         //  The first solution found is returned.
         //  If {stopAtFirst} is false:
         //  A full traversal is done up to {depth}.
-        //  Solutions are returned as references to the end state. The end states have a linked-list path back to {startState}
+        //  Solutions are returned as references to an end state which satisfies the goal state criteria.
+        //  Each end state is the last member of a linked-list path back to {startState}
         //  which can be enumerated by traversing KlotskiState.parent.
         //
         public SearchContext search(KlotskiState startState, IComparer<KlotskiState> searchComparer, int depth, bool stopAtFirst)
@@ -256,7 +262,12 @@ namespace KlotskiSolverApplication
             return searchResults;
         }
 
-        public SearchContext search(IEnumerable<KlotskiState> startStates, IEnumerable<KlotskiState> excludeStates, IComparer<KlotskiState> searchComparer, int maxMoves, bool stopAtFirst)
+        SearchContext search(
+            IEnumerable<KlotskiState> startStates, 
+            IEnumerable<KlotskiState> excludeStates, 
+            IComparer<KlotskiState> searchComparer, 
+            int maxMoves, 
+            bool stopAtFirst)
         {
             Trace.Assert(startStates?.Count() > 0, "One or more start states required");
 
@@ -310,7 +321,7 @@ namespace KlotskiSolverApplication
                 if (stopwatch.ElapsedMilliseconds - lastReport > 100 )
                 {
                     lastReport = stopwatch.ElapsedMilliseconds;
-                    Console.WriteLine($"Depth: {state.moveCount} / {state.depth} Queue:{searchQueue.Count} Visited:{visitedStates.Count()}");
+                    Console.WriteLine($"Moves: {state.moveCount}  Depth: {state.depth}  Queue: {searchQueue.Count}  Visited: {visitedStates.Count()}");
                 }
 
                 // update maxDepthReached stat
@@ -337,6 +348,13 @@ namespace KlotskiSolverApplication
                     // same solution state.
                 }
 
+                //  There's a small problem with this pruning logic.
+                //  It will sometimes prevent a more optimal solution from being found:
+                //  If this history is, say, A,B,C and another history, A,C,B already in the queue
+                //  leads to the same state, A,B,C will not be searched.
+                //  However, in cases where the optimal solution is A,B,C,C..., it may not be found
+                //  if the longer solution A,C,B,C is found first--4 moves instead of 3.
+                //  The found solution will have minimal depth, but not necessarily the smallest move count.
                 if (visitedStates.ContainsKey(state.canonicalString))
                 {
                     ++searchContext.prunedAfterPop;

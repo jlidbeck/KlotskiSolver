@@ -208,7 +208,7 @@ namespace KlotskiSolverApplication
                     Console.WriteLine("***********  Goal  ***********");
                 }
 
-                Console.WriteLine($"Depth: {state.moveCount} / {state.depth} DistSq: {state.getDistanceSquareScore()} {(state.parentState == null ? ' ' : '<')}{(state==endState ? ' ' : '>')} ");
+                Console.WriteLine($"Move: {state.moveCount}  Depth: {state.depth}  Distance: {state.getDistanceEstimate()} {(state.parentState == null ? ' ' : '<')}{(state==endState ? ' ' : '>')} ");
 
                 // choose a move
 
@@ -227,12 +227,12 @@ namespace KlotskiSolverApplication
                     for (int j = 0; j < children.Count(); ++j)
                     {
                         var st = children[j];
-                        prompt += $"\n   {j+1}: {st.movedPiece} {st.movedPieceDirection,5}   {st.moveCount} / {st.depth}";
+                        prompt += $"\n   {j+1}: {st.movedTile} {st.movedTileDirection,5}   {st.moveCount} / {st.depth}";
                     }
                 }
 
                 Console.WriteLine(prompt);
-                Console.Write("Ctrl+Z to backtrack, Ctrl+Y to retrack, ENTER to search: ");
+                Console.Write("Home, End, Ctrl+Z/, Ctrl+Y/. to navigate, ENTER to search: ");
                 ConsoleKeyInfo key = Console.ReadKey();
                 Console.WriteLine();
 
@@ -301,11 +301,13 @@ namespace KlotskiSolverApplication
                 }
                 else if (key.Key == ConsoleKey.F2)
                 {
-                    // print a concise history of moved tiles
+                    // Display history: print a concise history of moved tiles
                     Console.WriteLine("History: " + endState.getHistoryString());
                 }
                 else if (key.Key == ConsoleKey.F3)
                 {
+                    // Animate: replay states from the beginning to {endState}
+
                     var states = new List<KlotskiState>();
 
                     // place states in list in forward order, {endState} at end
@@ -331,7 +333,7 @@ namespace KlotskiSolverApplication
                         Console.WriteLine();
                         p.write();
                         Console.WriteLine();
-                        Console.WriteLine($"Depth: {p.moveCount} / {p.depth} DistSq: {p.getDistanceSquareScore()} ");
+                        Console.WriteLine($"Moves: {p.moveCount}  Depth: {p.depth}  DistSq: {p.getDistanceSquareScore()} ");
                         System.Threading.Thread.Sleep(animationDelay);
                         if (Console.KeyAvailable)
                         {
@@ -342,6 +344,7 @@ namespace KlotskiSolverApplication
                 }
                 else if (key.Key == ConsoleKey.F5)
                 {
+                    // reset
                     restartNeeded = true;
                 }
                 else if (key.Key == ConsoleKey.F7)
@@ -361,7 +364,8 @@ namespace KlotskiSolverApplication
                 }
                 else if (key.Key == ConsoleKey.Enter)
                 {
-                    Console.WriteLine("Search:\n    [1] DistSqHeuristic (fast, finds 1 solution)");
+                    Console.WriteLine("Search:");
+                    Console.WriteLine("    [1] DistSqHeuristic (fast, finds 1 solution)");
                     Console.WriteLine("     2  MoveCount BFS (slow, finds 1 solution with min moves)");
                     Console.WriteLine("     3  Complete BFS search (finds all solutions)");
                     Console.WriteLine("     4  Deepest state search (finds all states furthest from any goal state)");
@@ -489,7 +493,7 @@ namespace KlotskiSolverApplication
                     // make the first move available for that piece.
                     for (int j = 0; j < children.Count(); ++j)
                     {
-                        if (char.ToLower(key.KeyChar) == char.ToLower(children[j].movedPiece))
+                        if (char.ToLower(key.KeyChar) == char.ToLower(children[j].movedTile))
                         {
                             nextState = children[j];
                             break;
