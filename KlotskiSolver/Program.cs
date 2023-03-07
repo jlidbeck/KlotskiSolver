@@ -227,7 +227,7 @@ namespace KlotskiSolverApplication
                     for (int j = 0; j < children.Count(); ++j)
                     {
                         var st = children[j];
-                        prompt += $"\n   {j+1}: {st.movedTile} {st.movedTileDirection,5}   {st.moveCount} / {st.depth}";
+                        prompt += $"\n   {j+1,2}: {st.tileMove,-9}   {st.moveCount} / {st.depth}";
                     }
                 }
 
@@ -493,7 +493,7 @@ namespace KlotskiSolverApplication
                     // make the first move available for that piece.
                     for (int j = 0; j < children.Count(); ++j)
                     {
-                        if (char.ToLower(key.KeyChar) == char.ToLower(children[j].movedTile))
+                        if (char.ToLower(key.KeyChar) == char.ToLower(children[j].tileMove.tile))
                         {
                             nextState = children[j];
                             break;

@@ -10,7 +10,7 @@ namespace KlotskiSolverApplication
     //  States make up a tree data structure, with each state linked to its parent state
     //  and potentially multiple child states.
 
-    [DebuggerDisplay("{stateString} [{movedTile.ToString()} {movedTileDirection}] Move={moveCount} Depth={depth}")]
+    [DebuggerDisplay("{stateString} {tileMove} Move={moveCount} Depth={depth}")]
     class KlotskiState
     {
         public const char EMPTY = ' ';
@@ -33,10 +33,27 @@ namespace KlotskiSolverApplication
         public int moveCount { get; private set; } = 0;
         
         // data describing the move transforming parent state to this state
-		public char movedTile { get; private set; } = '\0';
+        //public char movedTile => tileMove.tile;
         public enum Direction { DOWN=1, RIGHT=2, UP=3, LEFT=4 };
-        public Direction movedTileDirection { get; private set; }
+        //public Direction movedTileDirection => tileMove.direction;
 
+        [DebuggerDisplay("[{tile.ToString()} {direction}]")]
+        public struct TileMove
+        {
+            public char tile;
+            public Direction direction;
+
+            public override string ToString()
+            {
+                if (tile == '\0')
+                    return "[]";
+                return $"[{tile.ToString()} {direction}]";
+            }
+
+            public static TileMove Empty = new TileMove { tile = '\0' };
+        }
+
+        public TileMove tileMove { get; private set; } = new TileMove { tile = '\0' };
 
         #region Construction
 
@@ -308,13 +325,13 @@ namespace KlotskiSolverApplication
         public string getHistoryString()
         {
             char tileId = '\0';
-            string sz = "" + movedTile;
-            for (var i = parentState; i != null && i.movedTile != '\0'; i = i.parentState)
+            string sz = "" + tileMove.tile;
+            for (var i = parentState; i != null && i.tileMove.tile != '\0'; i = i.parentState)
             {
-                if (i.movedTile != tileId)
+                if (i.tileMove.tile != tileId)
                 {
-                    tileId = i.movedTile;
-                    sz = "" + i.movedTile + sz;
+                    tileId = i.tileMove.tile;
+                    sz = "" + i.tileMove.tile + sz;
                 }
             }
             return sz;
@@ -418,7 +435,7 @@ namespace KlotskiSolverApplication
             parentState = null;
             depth = 0;
             moveCount = 0;
-            movedTile = '\0';
+            tileMove = TileMove.Empty;
         }
 
         public void clearChildStates()
@@ -450,7 +467,7 @@ namespace KlotskiSolverApplication
             child.depth = this.depth + 1;
 
             child.moveCount = this.moveCount;
-            if (child.movedTile != this.movedTile)
+            if (child.tileMove.tile != this.tileMove.tile)
                 ++child.moveCount;
 
             child.parentState = this;
@@ -604,11 +621,12 @@ namespace KlotskiSolverApplication
             if (tilesToMove <= 0)
                 return null;
 
-			//if (tileId == '1' && (direction == LEFT || direction == RIGHT))
-			//	Console.WriteLine("moved tile 1: "+direction);
+            //if (tileMove.tile == '1' && (direction == LEFT || direction == RIGHT))
+            //	Console.WriteLine("moved tile 1: "+direction);
 
-			newstate.movedTile = tileId;
-            newstate.movedTileDirection = direction;
+            newstate.tileMove = new TileMove { tile = tileId, direction = direction };
+            newstate.parentState = this;
+
 			return newstate;
         }
 
