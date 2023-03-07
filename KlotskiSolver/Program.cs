@@ -201,6 +201,12 @@ namespace KlotskiSolverApplication
                     restartNeeded = false;
                 }
 
+                // clear some rows for the board and menu display
+                int rows = state.context.height + 6;
+                for (int i = 0; i < rows; ++i)
+                    Console.WriteLine();
+                Console.CursorTop = Console.BufferHeight - rows;
+
                 state.write();
 
                 if (state.matchesGoalState())
@@ -232,7 +238,7 @@ namespace KlotskiSolverApplication
                 }
 
                 Console.WriteLine(prompt);
-                Console.Write("Home, End, Ctrl+Z/, Ctrl+Y/. to navigate, ENTER to search: ");
+                Console.Write("{Home, End, Ctrl+Z/, Ctrl+Y/.} to navigate, F3 to animate, ENTER to search: ");
                 ConsoleKeyInfo key = Console.ReadKey();
                 Console.WriteLine();
 
@@ -316,21 +322,27 @@ namespace KlotskiSolverApplication
                         states.Insert(0, p);
                     }
 
+                    if(states.Count <=1)
+                    {
+                        Console.WriteLine("No history to animate.");
+                        continue;
+                    }
+
                     // Shift+F3 to animate in reverse
                     if ((key.Modifiers & ConsoleModifiers.Shift) != 0)
                     {
                         states.Reverse();
                     }
 
-                    Console.WriteLine();
-                    var cx = Console.CursorLeft;
-                    var cy = Console.CursorTop;
+                    // clear lines at the bottom of the console for the animation
+                    rows = states[0].context.height + 3;
+                    for (int i = 0; i < rows; ++i)
+                        Console.WriteLine();
                     foreach (var p in states)
                     {
-                        Console.CursorLeft = cx;
-                        Console.CursorTop = cy;
+                        Console.CursorLeft = 0;
+                        Console.CursorTop = Console.BufferHeight - rows;
 
-                        Console.WriteLine();
                         p.write();
                         Console.WriteLine();
                         Console.WriteLine($"Moves: {p.moveCount}  Depth: {p.depth}  DistSq: {p.getDistanceSquareScore()} ");
@@ -422,13 +434,10 @@ namespace KlotskiSolverApplication
                     }
                     catch (Exception err)
                     {
+                        Console.ForegroundColor = ConsoleColor.White;
+                        Console.BackgroundColor = ConsoleColor.Red;
                         Console.WriteLine($"Error: {err.Message}");
-                    }
-
-
-                    if (searchResults == null)
-                    {
-                        Console.WriteLine("Search was interrupted.");
+                        Console.ResetColor();
                         continue;
                     }
 
@@ -455,7 +464,7 @@ namespace KlotskiSolverApplication
                         if (searchResults.deepestStates.Count() > 0)
                         {
                             Console.WriteLine("Select a deepest state:");
-                            endState = state = selectState(searchResults.deepestStates);
+                            endState = state = selectState(pd, searchResults.deepestStates);
                         }
                         else
                         {
@@ -476,7 +485,7 @@ namespace KlotskiSolverApplication
                                 $"MoveCount={searchResults.solutionStates.Min(st => st.moveCount)}..{searchResults.solutionStates.Max(st => st.moveCount)} " +
                                 $"Depth={searchResults.solutionStates.Min(st => st.depth)}..{searchResults.solutionStates.Max(st => st.depth)}");
                             searchResults.solutionStates.Sort(new KlotskiState.MoveCountComparer());
-                            endState = state = selectState(searchResults.solutionStates);
+                            endState = state = selectState(pd, searchResults.solutionStates);
                         }
                         else
                         {
@@ -528,12 +537,12 @@ namespace KlotskiSolverApplication
         }
 
         //  Displays all states, then prompts user to select one
-        static KlotskiState selectState(IEnumerable<KlotskiState> solutionStates)
+        static KlotskiState selectState(KlotskiProblemDefinition pd, IEnumerable<KlotskiState> solutionStates)
         {
             if (solutionStates.Count() == 0)
                 return null;
 
-            writeStatesToConsole(solutionStates);
+            writeStatesToConsole(pd, solutionStates);
 
             Console.Write($"Select solution (0-{solutionStates.Count() - 1}) [0]: ");
 
@@ -544,18 +553,28 @@ namespace KlotskiSolverApplication
             return solutionStates.First();
         }
 
-        static void writeStatesToConsole(IEnumerable<KlotskiState> results)
+        static void writeStatesToConsole(KlotskiProblemDefinition pd, IEnumerable<KlotskiState> results)
         {
             if (results.Count() == 0) 
                 return;
 
-            int cx = 1;
-            var cy = Console.CursorTop;
+            int height = pd.height + 3;
+
+            int cx = 0;
+            int cy = Console.BufferHeight - height;
+
             int x = cx, y = cy;
             for (int i = 0; i < results.Count(); ++i)
             {
+                if (x == 0)
+                {
+                    // clear lines at the bottom of the console window
+                    for (int j = 0; j < height; ++j)
+                        Console.WriteLine();
+                }
+
                 var state = results.ElementAt(i);
-                var pd = state.context;
+                //var pd = state.context;
 
                 Console.BackgroundColor = ConsoleColor.Black;
                 Console.ForegroundColor = ConsoleColor.White;
