@@ -206,7 +206,15 @@ namespace KlotskiSolverApplication
         public SearchContext findDeepestStates(int depth)
         {
             // First, do a full graph traversal to find all reachable solution states
-            var searchResults = search(startState, new KlotskiState.MoveCountComparer(), depth, false);
+            var searchOptions = new SearchOptions
+            {
+                startStates = new List<KlotskiState> { startState },
+                searchComparer = new KlotskiState.MoveCountComparer(),
+                maxMoves = depth,
+                stopAtFirst = false
+            };
+
+            var searchResults = search(searchOptions);
 
             if (searchResults == null)
                 return null;
@@ -226,7 +234,8 @@ namespace KlotskiSolverApplication
             }
 
             // Search 2: another full traversal with multiple start states
-            searchResults = search(searchResults.solutionStates, null, new KlotskiState.MoveCountComparer(), depth, false);
+            searchOptions.startStates = searchResults.solutionStates;
+            searchResults = search(searchOptions);
 
             Console.WriteLine($"*** 2nd BFS traversal complete: {searchResults.deepestStates.Count()} states found with moveCount={searchResults.deepestStates.First().moveCount} ***");
             Console.WriteLine();
@@ -245,31 +254,50 @@ namespace KlotskiSolverApplication
         //  Each end state is the last member of a linked-list path back to {startState}
         //  which can be enumerated by traversing KlotskiState.parent.
         //
-        public SearchContext search(KlotskiState startState, IComparer<KlotskiState> searchComparer, int depth, bool stopAtFirst)
+        //public SearchContext search(SearchOptions searchOptions)
+        //{
+        //    searchOptions.startStates = new List<KlotskiState> { state };
+
+        //    // if a history was provided, add all previous states to the visited set
+        //    // not including the last state, which will be the start state for the search.
+        //    var excludeStates = new List<KlotskiState>();
+        //    for (var st = startState.parentState; st != null; st = st.parentState)
+        //    {
+        //        excludeStates.Add(st);
+        //    }
+        //    searchOptions.excludeStates = excludeStates;
+
+        //    return search(searchOptions);
+        //}
+
+        public class SearchOptions
         {
-            var startStates = new List<KlotskiState>();
-            startStates.Add(startState);
+            public IEnumerable<KlotskiState> startStates;
+            public IEnumerable<KlotskiState> excludeStates = null;
+            public IComparer<KlotskiState> searchComparer;
+            public int maxMoves = 200;
+            public bool stopAtFirst = true;
+            public bool optimizePath = true;
+        }
+
+        public SearchContext search( SearchOptions searchOptions)
+        {
+            Trace.Assert(searchOptions.startStates?.Count() > 0, "One or more start states required");
 
             // if a history was provided, add all previous states to the visited set
             // not including the last state, which will be the start state for the search.
-            var excludeStates = new List<KlotskiState>();
-            for (var st = startState.parentState; st != null; st = st.parentState)
+            if (searchOptions.excludeStates == null)
             {
-                excludeStates.Add(st);
+                var excludeStates = new List<KlotskiState>();
+                foreach (var startState in searchOptions.startStates)
+                {
+                    for (var st = startState.parentState; st != null; st = st.parentState)
+                    {
+                        excludeStates.Add(st);
+                    }
+                }
+                searchOptions.excludeStates = excludeStates;
             }
-
-            var searchResults = search(startStates, excludeStates, searchComparer, depth, stopAtFirst);
-            return searchResults;
-        }
-
-        SearchContext search(
-            IEnumerable<KlotskiState> startStates, 
-            IEnumerable<KlotskiState> excludeStates, 
-            IComparer<KlotskiState> searchComparer, 
-            int maxMoves, 
-            bool stopAtFirst)
-        {
-            Trace.Assert(startStates?.Count() > 0, "One or more start states required");
 
             // Keep track of all states visited to avoid backtracking or searching suboptimal paths.
             // States are keyed as their canonical strings, because we consider a state visited even if identical tiles are exchanged.
@@ -282,19 +310,19 @@ namespace KlotskiSolverApplication
 
             // if a history was provided, add all previous states to the visited set
             // not including the last state, which will be the start state for the search.
-            if (excludeStates != null)
+            if (searchOptions.excludeStates != null)
             {
-                foreach (var st in excludeStates)
+                foreach (var st in searchOptions.excludeStates)
                 {
                     visitedStates[st.canonicalString] = st;
                 }
             }
 
             // search queue for width-first-search
-            var searchQueue = new MS.Internal.PriorityQueue<KlotskiState>(0, searchComparer);
+            var searchQueue = new MS.Internal.PriorityQueue<KlotskiState>(0, searchOptions.searchComparer);
 
             // starting states for search
-            foreach (var st in startStates)
+            foreach (var st in searchOptions.startStates)
                 searchQueue.Push(st);
 
 
@@ -339,8 +367,12 @@ namespace KlotskiSolverApplication
                     // Solution found
                     searchContext.solutionStates.Add(state);
 
-                    if (stopAtFirst)
+                    if (searchOptions.stopAtFirst)
+                    {
+                        if(searchOptions.optimizePath)
+                            while (optimizePath(state)) ;
                         return searchContext;
+                    }
 
                     // Note: though this is a solution state, we continue to add it to the search queue and
                     // therefore we will be traversing paths that travel *through* the solution state.
@@ -367,7 +399,7 @@ namespace KlotskiSolverApplication
 
                 searchContext.incrementDepthCounter(state);
 
-                if (state.moveCount >= maxMoves)
+                if (state.moveCount >= searchOptions.maxMoves)
                 {
                     continue;
                 }

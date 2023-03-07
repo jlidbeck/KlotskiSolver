@@ -382,38 +382,40 @@ namespace KlotskiSolverApplication
                     Console.WriteLine("     3  Complete BFS search (finds all solutions)");
                     Console.WriteLine("     4  Deepest state search (finds all states furthest from any goal state)");
                     var c = Console.ReadKey();
-                    IComparer<KlotskiState> searchComparer;
+
+                    var searchOptions = new KlotskiProblemDefinition.SearchOptions();
+                    searchOptions.startStates = new List<KlotskiState> { state };
                     bool deepStateSearch = false;
-                    bool stopAtFirst = true;
                     switch (c.KeyChar)
                     {
                         default:
                         case '1':
-                            searchComparer = new KlotskiState.DistanceSquaredHeuristicComparer(7, 2);
+                            searchOptions.searchComparer = new KlotskiState.DistanceSquaredHeuristicComparer(7, 2);
                             break;
 
                         case '2':
-                            searchComparer = new KlotskiState.MoveCountComparer();
+                            searchOptions.searchComparer = new KlotskiState.MoveCountComparer();
                             break;
 
                         case '3':
-                            searchComparer = new KlotskiState.MoveCountComparer();
-                            stopAtFirst = false;
+                            searchOptions.searchComparer = new KlotskiState.MoveCountComparer();
+                            searchOptions.stopAtFirst = false;
                             break;
 
                         case '4':
-                            searchComparer = new KlotskiState.MoveCountComparer();
-                            stopAtFirst = false;
+                            searchOptions.searchComparer = new KlotskiState.MoveCountComparer();
+                            searchOptions.stopAtFirst = false;
                             deepStateSearch = true;
                             break;
                     }
-                    int searchDepth = 200;
-                    Console.Write($"\nSearch depth [{searchDepth}]: ");
-                    var str = Console.ReadLine();
-                    if (!int.TryParse(str, out searchDepth))
-                        searchDepth = 200;
 
-                    Console.WriteLine($"\nStarting search: {searchComparer} Depth={searchDepth} from state {state.depth} Deep={deepStateSearch}");
+                    Console.Write($"\nSearch depth [{searchOptions.maxMoves}]: ");
+                    var str = Console.ReadLine();
+                    int maxMoves;
+                    if (int.TryParse(str, out maxMoves))
+                        searchOptions.maxMoves = maxMoves;
+
+                    Console.WriteLine($"\nStarting search: {searchOptions.searchComparer} Depth={searchOptions.maxMoves} from state {state.depth} Deep={deepStateSearch}");
 
                     state.detach();   // force new search
 
@@ -422,13 +424,20 @@ namespace KlotskiSolverApplication
                     try
                     {
                         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-                        if(deepStateSearch)
-                            searchResults = pd.findDeepestStates(searchDepth);
+                        if (deepStateSearch)
+                            searchResults = pd.findDeepestStates(searchOptions.maxMoves);
                         else
-                            searchResults = pd.search(state, searchComparer, searchDepth, stopAtFirst);
+                            searchResults = pd.search(searchOptions);
                         stopwatch.Stop();
 
+                        if (searchResults == null)
+                        {
+                            // Search was canceled
+                            continue;
+                        }
+
                         Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine($"Search complete: {searchResults}");
                         Console.WriteLine($"Search time: {stopwatch.Elapsed}");
                         Console.ResetColor();
                     }
