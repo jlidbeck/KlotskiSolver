@@ -433,6 +433,92 @@ namespace KlotskiSolverApplication
             return searchContext;
         }   // void search()
 
+        // search path for moves that can be combined if the steps are reordered
+        private bool optimizePath(KlotskiState finalState)
+        {
+            for (KlotskiState state = finalState; state != null; state = state.parentState)
+            {
+                var prevState = state.parentState;
+                if (prevState == null)
+                    break;
+
+                // find the previous step that moved tile that moved in {state}.
+                // this will be the swap candidate.
+                // if it's immediately preceding {state}, there's no need to test this swap--continue the outer loop
+
+                if (prevState.tileMove.tile == state.tileMove.tile)
+                    continue;
+
+                var swapCandidate = prevState.parentState;
+                while (swapCandidate != null && swapCandidate.tileMove.tile != state.tileMove.tile)
+                    swapCandidate = swapCandidate.parentState;
+                if (swapCandidate == null)
+                    continue;
+
+                // if the previous moves were    S, A', B, C, ..., Y, Z,  A'',
+                // see if they can be reordered  S, B,  C, ..., Y, Z, A', A''
+
+                // apply the moves SC+1, SC+2, ... ST-1
+                // in order
+                List<KlotskiState.TileMove> moves = new List<KlotskiState.TileMove>();
+                for (var st = prevState; st != swapCandidate; st = st.parentState)
+                    moves.Add(st.tileMove);
+                moves.Reverse();
+                moves.Add(swapCandidate.tileMove);
+
+                var newStates = new List<KlotskiState>();
+                var newState = swapCandidate.parentState;
+                foreach (var move in moves)
+                {
+                    newState = newState?.moveTile(move.tile, move.direction);
+                    newStates.Add(newState);
+                }
+
+                if (newState != null)
+                {
+                    if (newState?.stateString == prevState.stateString)
+                    {
+                        // the last 2 moves can be reordered.
+                        //Console.WriteLine($"Rotating moves {swapCandidate.depth}-{state.depth}:\n{swapCandidate} ...\n{state}");
+                        //Console.WriteLine($"After:\n{newStates[0]}\n{newState}");
+
+                        newStates[0].parentState = swapCandidate.parentState;
+                        state.parentState = newState;
+
+                        // todo: nextState and beyond will have to be re-parented, and the move counts updated
+
+                        //nextState.parentState = state;
+                        state = swapCandidate;
+                    }
+                }
+            }
+
+            int moveCountOld = finalState.moveCount;
+            updateMoveCounts(finalState);
+            Console.WriteLine($"Reordered movecount: {moveCountOld} --> {finalState.moveCount}");
+            return (finalState.moveCount < moveCountOld);
+        }
+
+
+        void updateMoveCounts(KlotskiState finalState)
+        {
+            var history = new List<KlotskiState>();
+            for (KlotskiState state = finalState; state != null; state = state.parentState)
+            {
+                history.Add(state);
+            }
+            history.Reverse();
+
+            foreach (var state in history)
+            {
+                if (state.parentState == null)
+                    continue;
+                state.moveCount = (state.parentState.tileMove.tile == state.tileMove.tile)
+                    ? state.parentState.moveCount
+                    : state.parentState.moveCount + 1;
+            }
+        }
+
 
         //  Finds a random state {depth} steps from {startState}.
         //  Shuffle is implemented as a random walk of length {depth} from {startState}, avoiding loops.

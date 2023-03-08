@@ -23,15 +23,15 @@ namespace KlotskiSolverApplication
 
 		// data structure
         public KlotskiProblemDefinition context { get; private set; } = null;
-		public KlotskiState parentState { get; private set; } = null;
+		public KlotskiState parentState { get; set; } = null;
 		List<KlotskiState> _children = null;
 
 		// number of steps from startState
         public int depth { get; private set; } = 0;
 
         // piece move count. this can be less than {depth} because consecutive moves of the same tile are only counted once
-        public int moveCount { get; private set; } = 0;
-        
+        public int moveCount { get; set; } = 0;
+
         // data describing the move transforming parent state to this state
         //public char movedTile => tileMove.tile;
         public enum Direction { DOWN=1, RIGHT=2, UP=3, LEFT=4 };
@@ -518,7 +518,7 @@ namespace KlotskiSolverApplication
         // Returns a state object representing the move if it is valid--valid tile,
         // no collisions--otherwise returns null.
         // Does not modify {this}.
-        protected KlotskiState moveTile(char tileId, Direction direction)
+        public KlotskiState moveTile(char tileId, Direction direction)
         {
             if (!( (tileId >= '0' && tileId <= '9') 
                 || (tileId >= 'A' && tileId <= 'Z') 
