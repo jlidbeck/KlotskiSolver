@@ -400,7 +400,6 @@ namespace KlotskiSolverApplication
 
                         case '3':
                             searchOptions.searchComparer = new KlotskiState.MoveCountComparer();
-                            searchOptions.stopAtFirst = false;
                             break;
 
                         case '4':
@@ -431,16 +430,13 @@ namespace KlotskiSolverApplication
                             searchResults = pd.search(searchOptions);
                         stopwatch.Stop();
 
-                        if (searchResults == null)
-                        {
-                            // Search was canceled
-                            continue;
-                        }
-
                         Console.ForegroundColor = ConsoleColor.Green;
-                        Console.WriteLine($"Search complete: {searchResults}");
+                        Console.WriteLine(searchResults.ToString());
                         Console.WriteLine($"Search time: {stopwatch.Elapsed}");
                         Console.ResetColor();
+
+                        if (searchResults.canceled)
+                            continue;
                     }
                     catch (Exception err)
                     {

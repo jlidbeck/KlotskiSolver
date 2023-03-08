@@ -159,6 +159,8 @@ namespace KlotskiSolverApplication
         [DebuggerDisplay("Solutions={solutionStates.Count}, Visited={visitedStates}, MaxDepth={maxDepthReached}")]
         public class SearchContext
         {
+            public bool canceled { get; internal set; } = false;
+
             public readonly List<KlotskiState> solutionStates = new List<KlotskiState>();
 
             // count of all states reached by the search
@@ -180,7 +182,7 @@ namespace KlotskiSolverApplication
             public List<KlotskiState> deepestStates = null;
 
             // update {visitedStatesByMoveCount} and {deepestStates}
-            internal void incrementDepthCounter(KlotskiState state)
+            internal void addToVisitedStates(KlotskiState state)
             {
                 if (visitedStatesByMoveCount.Count() <= state.moveCount)
                 {
@@ -200,8 +202,14 @@ namespace KlotskiSolverApplication
             // additional reporting for debugging
             public int prunedAfterPop { get; internal set; } = 0;
             public int prunedBeforePush { get; internal set; } = 0;
-        };
 
+            public override string ToString()
+            {
+                if (canceled)
+                    return $"[SEARCH CANCELED] Visited={visitedStates}, MaxDepth={maxDepthReached}, MaxMoves={maxMovesReached}";
+                return $"Solutions={solutionStates.Count}, Visited={visitedStates}, MaxDepth={maxDepthReached}, MaxMoves={maxMovesReached}, AllStatesVisited={allStatesVisited}";
+            }
+        }
         //  Finds all states at the greatest distance from any solution state
         public SearchContext findDeepestStates(int depth)
         {
@@ -278,6 +286,7 @@ namespace KlotskiSolverApplication
             public int maxMoves = 200;
             public bool stopAtFirst = true;
             public bool optimizePath = true;
+            public bool storeVisitedStates = false;
         }
 
         public SearchContext search( SearchOptions searchOptions)
@@ -337,8 +346,8 @@ namespace KlotskiSolverApplication
                 if (Console.KeyAvailable)
                 {
                     Console.ReadKey(true);
-                    Console.WriteLine("Search canceled.");
-                    return null;
+                    searchContext.canceled = true;
+                    return searchContext;
                 }
 
                 // take one off the queue
@@ -397,7 +406,10 @@ namespace KlotskiSolverApplication
 
                 visitedStates[state.canonicalString] = state;
 
-                searchContext.incrementDepthCounter(state);
+                if (searchOptions.storeVisitedStates)
+                {
+                    searchContext.addToVisitedStates(state);
+                }
 
                 if (state.moveCount >= searchOptions.maxMoves)
                 {
