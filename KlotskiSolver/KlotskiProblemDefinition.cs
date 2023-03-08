@@ -446,7 +446,7 @@ namespace KlotskiSolverApplication
         }   // void search()
 
         // search path for moves that can be combined if the steps are reordered
-        private bool optimizePath(KlotskiState finalState)
+        private static bool optimizePath(KlotskiState finalState)
         {
             for (KlotskiState state = finalState; state != null; state = state.parentState)
             {
@@ -505,14 +505,28 @@ namespace KlotskiSolverApplication
                 }
             }
 
+            Dictionary<string, KlotskiState> states = new Dictionary<string, KlotskiState>();
+            for (KlotskiState state = finalState; state != null; state = state.parentState)
+            {
+                if(states.ContainsKey(state.stateString))
+                {
+                    // repeated state--cut out the intermediate loop
+                    states[state.stateString].parentState = state.parentState;
+                }
+                else
+                {
+                    states[state.stateString] = state;
+                }
+            }
+
             int moveCountOld = finalState.moveCount;
             updateMoveCounts(finalState);
-            Console.WriteLine($"Reordered movecount: {moveCountOld} --> {finalState.moveCount}");
+            Console.WriteLine($"Optimized path: {moveCountOld} --> {finalState.moveCount}");
             return (finalState.moveCount < moveCountOld);
         }
 
 
-        void updateMoveCounts(KlotskiState finalState)
+        static void updateMoveCounts(KlotskiState finalState)
         {
             var history = new List<KlotskiState>();
             for (KlotskiState state = finalState; state != null; state = state.parentState)
