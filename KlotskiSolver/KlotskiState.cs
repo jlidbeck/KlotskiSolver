@@ -132,35 +132,35 @@ namespace KlotskiSolverApplication
             }
         }
 
-        //  DistanceSquaredHeuristicComparer
+        //  DistanceHeuristicComparer
         //  This heuristic comparison function estimates the distance from the goal state using the sum of the
         //  distance squared for each tile cell specified in the goal state. It is not guaranteed to find an
         //  optimal solution, but it will probably find a solution much faster.
         //  Note that for best performance a larger depth cutoff should be used, well more than the minimum.
-        //  This comparer does especially well when the goal state specifies multiple tiles, such as the 15-slider
-        //  puzzle.
+        //  This comparer does especially well when the goal state specifies multiple tiles, such as the 15-style
+        //  "boss" slider puzzles.
         //  The move count is given some weight, to help avoid getting stuck in local minima.
-        //
-        public class DistanceSquaredHeuristicComparer : IComparer<KlotskiState>
+        //  A higher moveCountWeight searches tend to take longer but find shorter solutions.
+        public class DistanceHeuristicComparer : IComparer<KlotskiState>
         {
-            public int distSqWeight { get; private set; } = 7;
+            public int distanceWeight { get; private set; } = 7;
             public int moveCountWeight { get; private set; } = 2;
 
-            public DistanceSquaredHeuristicComparer(int distSqWeight, int moveCountWeight)
+            public DistanceHeuristicComparer(int distanceWeight, int moveCountWeight)
             {
-                this.distSqWeight = distSqWeight;
+                this.distanceWeight = distanceWeight;
                 this.moveCountWeight = moveCountWeight;
             }
 
             public override string ToString()
             {
-                return $"DistanceSquaredHeuristic {distSqWeight}/{moveCountWeight}";
+                return $"DistanceSquaredHeuristic {distanceWeight}/{moveCountWeight}";
             }
 
             public int Compare(KlotskiState x, KlotskiState y)
             {
-                return distSqWeight    * ( x.getDistanceSquareScore() - y.getDistanceSquareScore() )
-                     + moveCountWeight * ( x.moveCount                - y.moveCount                );
+                return distanceWeight    * ( x.getDistanceEstimate() - y.getDistanceEstimate() )
+                     + moveCountWeight * ( x.moveCount             - y.moveCount             );
             }
         }
 
@@ -182,20 +182,20 @@ namespace KlotskiSolverApplication
             return true;
         }
 
-        //  Estimate distance for all tiles indicated in goal state.
-        //  Lower scores indicate this state is expected to be closer to the goal state.
-        public int getDistanceSquareScore()
+        //  Estimate distance from this state to a goalState state.
+        //  This metric uses the total distance squared from the goalState squares to the nearest part of the goalState tile.
+        public int getDistanceEstimate()
         {
-            int diffCount = 0;
-            var goal = context.goalState.stateString;
+            int distance = 0;
+            var goalState = context.goalState.stateString;
 
             // for each non-blank in the goal state..
-            for (int i = 0; i < goal.Length; ++i)
+            for (int i = 0; i < goalState.Length; ++i)
             {
-                char c = goal[i];
+                char c = goalState[i];
                 if (c == ' ') continue;
 
-                // find the nearest matching square (by Euclidean distance)
+                // find the nearest matching square (by Taxicab distance)
 
                 int ix = i % context.width;
                 int iy = i / context.width;
@@ -207,16 +207,20 @@ namespace KlotskiSolverApplication
                     {
                         int jx = j % context.width;
                         int jy = j / context.width;
-                        int dist = (ix - jx) * (ix - jx) + (iy - jy) * (iy - jy);
+                        int dist = Math.Abs(ix - jx) + Math.Abs(iy - jy);
                         if (dist < minDist)
                             minDist = dist;
                     }
                 }
 
-                diffCount += minDist;
+                distance += minDist;
+
+                // if the solution square is occupied by a different tile, increment the distance
+                if (stateString[i] != ' ' && this.stateString[i] != goalState[i])
+                    distance++;
             }
 
-            return diffCount;
+            return distance;
         }
 
         #endregion

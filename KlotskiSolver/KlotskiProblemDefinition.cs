@@ -556,7 +556,7 @@ namespace KlotskiSolverApplication
                 if (state.depth > lastReportedDepth)
                 {
                     lastReportedDepth = state.depth;
-                    Console.WriteLine($"Depth: {state.moveCount} / {state.depth} Score:{state.getDistanceSquareScore()} Stack:{searchStack.Count} Visited:{visitedStates.Count()}");
+                    Console.WriteLine($"Depth: {state.moveCount} / {state.depth} Score:{state.getDistanceEstimate()} Stack:{searchStack.Count} Visited:{visitedStates.Count()}");
                 }
 
                 if (visitedStates.Contains(state.canonicalString))
@@ -578,7 +578,7 @@ namespace KlotskiSolverApplication
                 // use heuristic to prioritize states (presumably) further from the goal.
                 // since a stack is last-in-first-out, the same heuristic used in solution searches
                 // can be used here for the opposite effect, ordering near-goal states LATER in the search.
-                children.Sort(new KlotskiState.DistanceSquaredHeuristicComparer(random.Next(10), 2));
+                children.Sort(new KlotskiState.DistanceHeuristicComparer(random.Next(10), 2));
 
                 foreach (var childState in children)
                 {

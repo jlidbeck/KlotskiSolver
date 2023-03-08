@@ -345,7 +345,7 @@ namespace KlotskiSolverApplication
 
                         p.write();
                         Console.WriteLine();
-                        Console.WriteLine($"Moves: {p.moveCount}  Depth: {p.depth}  DistSq: {p.getDistanceSquareScore()} ");
+                        Console.WriteLine($"Move: {p.moveCount}  Depth: {p.depth}  Distance: {p.getDistanceEstimate()} ");
                         System.Threading.Thread.Sleep(animationDelay);
                         if (Console.KeyAvailable)
                         {
@@ -377,7 +377,7 @@ namespace KlotskiSolverApplication
                 else if (key.Key == ConsoleKey.Enter)
                 {
                     Console.WriteLine("Search:");
-                    Console.WriteLine("    [1] DistSqHeuristic (fast, finds 1 solution)");
+                    Console.WriteLine("    [1] Distance Heuristic (fast, finds 1 solution)");
                     Console.WriteLine("     2  MoveCount BFS (slow, finds 1 solution with min moves)");
                     Console.WriteLine("     3  Complete BFS search (finds all solutions)");
                     Console.WriteLine("     4  Deepest state search (finds all states furthest from any goal state)");
@@ -390,7 +390,8 @@ namespace KlotskiSolverApplication
                     {
                         default:
                         case '1':
-                            searchOptions.searchComparer = new KlotskiState.DistanceSquaredHeuristicComparer(7, 2);
+                            searchOptions.searchComparer = new KlotskiState.DistanceHeuristicComparer(7, 2);
+                            searchOptions.maxMoves = 400;
                             break;
 
                         case '2':
