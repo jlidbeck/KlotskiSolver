@@ -367,7 +367,7 @@ namespace KlotskiSolverApplication
                 else if (key.Key == ConsoleKey.F8)
                 {
                     // shuffle current state, with no history
-                    var shuffleState = pd.randomWalk(state.clone(), 1000);
+                    var shuffleState = KlotskiSearch.randomWalk(state.clone(), 1000);
                     if (shuffleState != null)
                     {
                         // this drops any existing history
@@ -383,7 +383,7 @@ namespace KlotskiSolverApplication
                     Console.WriteLine("     4  Deepest state search (finds all states furthest from any goal state)");
                     var c = Console.ReadKey();
 
-                    var searchOptions = new KlotskiProblemDefinition.SearchOptions();
+                    var searchOptions = new KlotskiSearch.SearchOptions();
                     searchOptions.startStates = new List<KlotskiState> { state };
                     bool deepStateSearch = false;
                     switch (c.KeyChar)
@@ -417,17 +417,17 @@ namespace KlotskiSolverApplication
 
                     Console.WriteLine($"\nStarting search: {searchOptions.searchComparer} Depth={searchOptions.maxMoves} from state {state.depth} Deep={deepStateSearch}");
 
-                    state.detach();   // force new search
+                    state.detach();   // force new search from current state
 
-                    KlotskiProblemDefinition.SearchContext searchResults = null;
+                    KlotskiSearch.SearchContext searchResults = null;
 
                     try
                     {
                         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
                         if (deepStateSearch)
-                            searchResults = pd.findDeepestStates(searchOptions.maxMoves);
+                            searchResults = KlotskiSearch.findDeepestStates(pd, searchOptions.maxMoves);
                         else
-                            searchResults = pd.search(searchOptions);
+                            searchResults = KlotskiSearch.search(pd, searchOptions);
                         stopwatch.Stop();
 
                         Console.ForegroundColor = ConsoleColor.Green;
