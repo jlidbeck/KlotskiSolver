@@ -81,11 +81,11 @@ namespace KlotskiSolverApplication
 
             var searchResults = search(pd, searchOptions);
 
-            if (searchResults == null)
-                return null;
+            if (searchResults.canceled)
+                return searchResults;
 
             Console.WriteLine();
-            Console.WriteLine($"*** BFS traversal complete: {searchResults?.solutionStates?.Count()} solution states found ***");
+            Console.WriteLine($"*** BFS traversal complete: {searchResults.solutionStates.Count()} solution states found ***");
             Console.WriteLine();
 
             // Now reset and do a second traversal, starting with all the solution states.
@@ -100,6 +100,8 @@ namespace KlotskiSolverApplication
 
             // Search 2: another full traversal with multiple start states
             searchOptions.startStates = searchResults.solutionStates;
+            searchOptions.storeVisitedStates = true;
+
             searchResults = search(pd, searchOptions);
 
             Console.WriteLine($"*** 2nd BFS traversal complete: {searchResults.deepestStates.Count()} states found with moveCount={searchResults.deepestStates.First().moveCount} ***");

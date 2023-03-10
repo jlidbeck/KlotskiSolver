@@ -441,7 +441,7 @@ namespace KlotskiSolverApplication
                     catch (Exception err)
                     {
                         Console.ForegroundColor = ConsoleColor.White;
-                        Console.BackgroundColor = ConsoleColor.Red;
+                        Console.BackgroundColor = ConsoleColor.DarkRed;
                         Console.WriteLine($"Error: {err.Message}");
                         Console.ResetColor();
                         continue;
@@ -469,7 +469,8 @@ namespace KlotskiSolverApplication
                     {
                         if (searchResults.deepestStates.Count() > 0)
                         {
-                            Console.WriteLine("Select a deepest state:");
+                            Console.WriteLine();
+                            Console.WriteLine("Deepest states:");
                             endState = state = selectState(pd, searchResults.deepestStates);
                         }
                         else
@@ -550,7 +551,7 @@ namespace KlotskiSolverApplication
 
             writeStatesToConsole(pd, solutionStates);
 
-            Console.Write($"Select solution (0-{solutionStates.Count() - 1}) [0]: ");
+            Console.Write($"Select state (0-{solutionStates.Count() - 1}) [0]: ");
 
             var line = Console.ReadLine();
             int idx;
