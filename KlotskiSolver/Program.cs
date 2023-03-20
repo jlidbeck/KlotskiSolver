@@ -202,12 +202,14 @@ namespace KlotskiSolverApplication
                 }
 
                 // clear some rows for the board and menu display
-                int rows = state.context.height + 6;
+                int rows = pd.height*2 + 6;
                 for (int i = 0; i < rows; ++i)
                     Console.WriteLine();
                 Console.CursorTop = Console.BufferHeight - rows;
 
-                state.write();
+                state.write(true);
+
+                writeTimeline(state, endState);
 
                 if (state.matchesGoalState())
                 {
@@ -344,7 +346,7 @@ namespace KlotskiSolverApplication
                     }
 
                     // clear lines at the bottom of the console for the animation
-                    rows = states[0].context.height + 3;
+                    rows = pd.height*2 + 3;
                     for (int i = 0; i < rows; ++i)
                         Console.WriteLine();
                     foreach (var p in states)
@@ -352,7 +354,7 @@ namespace KlotskiSolverApplication
                         Console.CursorLeft = 0;
                         Console.CursorTop = Console.BufferHeight - rows;
 
-                        p.write();
+                        p.write(true);
                         Console.WriteLine();
                         Console.WriteLine($"Move: {p.moveCount}  Depth: {p.depth}  Distance: {p.getDistanceEstimate()} ");
                         System.Threading.Thread.Sleep(animationDelay);
@@ -550,6 +552,19 @@ namespace KlotskiSolverApplication
                 }
             }   // while(true)
 
+        }
+
+        //  Draws a scrubber-style timeline indicating the state's position in history
+        private static void writeTimeline(KlotskiState state, KlotskiState endState)
+        {
+            int width = Console.WindowWidth - 20;
+            int x = (endState.depth > 0 ? state.depth * width / endState.depth : 0);
+
+            Console.Write("   [");
+            Console.Write(new string('═', x));
+            Console.Write("▓▓");
+            Console.Write(new string('═', width - x));
+            Console.WriteLine($"]  Move:{state.moveCount}/{endState.moveCount}");
         }
 
         //  Displays all states, then prompts user to select one

@@ -16,10 +16,10 @@ namespace KlotskiSolverApplication
         public const char EMPTY = ' ';
 
         // serialized state descriptor
-        public String stateString { get; private set; } = null;
+        public string stateString { get; private set; } = null;
 
         // serialized state descriptor with tile IDs replaced with type IDs
-        String _canonicalString = null;
+        string _canonicalString = null;
 
 		// data structure
         public KlotskiProblemDefinition context { get; private set; } = null;
@@ -249,38 +249,90 @@ namespace KlotskiSolverApplication
 
 
         // Renders the state to the console output
-        public void write()
+        public void write(bool big)
         {
             var fg = Console.ForegroundColor;
             var bg = Console.BackgroundColor;
 
+            // tiles are drawn using spaces with background color = tile color.
+            // text is black
+
             Console.ForegroundColor = ConsoleColor.Black;
 
-            // only print each tile ID char once
+            // used to ensure that each tile's ID is printed only once
             var tileIdsPrinted = new HashSet<char>();
 
-            for (int row = 0; row < context.height; ++row)
+            if (big)
             {
-                Console.BackgroundColor = ConsoleColor.Black;
-                Console.Write("     ");
-                for (int col = 0; col < context.width; ++col)
+                for (int row = 0; row < context.height; ++row)
                 {
-                    char tileId = this.tileAt(row, col);
+                    for (int i = 0; i < 2; ++i)
+                    {
+                        Console.BackgroundColor = ConsoleColor.Black;
+                        Console.Write("     ");
 
-                    Console.BackgroundColor = context.tileColorMap[tileId];
-                    if (tileIdsPrinted.Contains(tileId))
-                    {
-                        Console.Write("  ");
-                    }
-                    else
-                    {
-                        tileIdsPrinted.Add(tileId);
-                        Console.Write(tileId);
-                        Console.Write(' ');
+                        // note that we're iterating one column past the end, to draw the side shading
+                        for (int col = 0; col <= context.width; ++col)
+                        {
+                            char tileId = this.tileAt(row, col);
+
+                            // render out-of-bounds as an empty square
+                            if (tileId == '\0')
+                                tileId = ' ';
+                            
+                            Console.BackgroundColor = context.tileColorMap[tileId];
+                            if (tileId == ' ' && this.tileAt(row, col - 1) > 0 && this.tileAt(row, col - 1) != ' ')
+                            {
+                                // render a tile's rightmost edge differently
+                                Console.BackgroundColor = context.tileColorMap[this.tileAt(row, col - 1)];
+                                Console.Write("▓");
+                                Console.BackgroundColor = context.tileColorMap[tileId];
+                                Console.Write("   ");
+                            }
+                            else if (tileIdsPrinted.Contains(tileId))
+                            {
+                                // render a tile or empty square
+                                Console.Write("    ");
+                            }
+                            else
+                            {
+                                // render the top-left corner of a tile
+                                tileIdsPrinted.Add(tileId);
+                                Console.Write(tileId);
+                                Console.Write("   ");
+                            }
+                        }
+
+                        Console.BackgroundColor = ConsoleColor.Black;
+                        Console.WriteLine();
                     }
                 }
-                Console.BackgroundColor = ConsoleColor.Black;
-                Console.WriteLine();
+            }
+            else
+            {
+                for (int row = 0; row < context.height; ++row)
+                {
+                    Console.BackgroundColor = ConsoleColor.Black;
+                    Console.Write("     ");
+                    for (int col = 0; col < context.width; ++col)
+                    {
+                        char tileId = this.tileAt(row, col);
+
+                        Console.BackgroundColor = context.tileColorMap[tileId];
+                        if (tileIdsPrinted.Contains(tileId))
+                        {
+                            Console.Write("  ");
+                        }
+                        else
+                        {
+                            tileIdsPrinted.Add(tileId);
+                            Console.Write(tileId);
+                            Console.Write(' ');
+                        }
+                    }
+                    Console.BackgroundColor = ConsoleColor.Black;
+                    Console.WriteLine();
+                }
             }
 
             Console.BackgroundColor = bg;
