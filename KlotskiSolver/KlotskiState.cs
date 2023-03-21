@@ -40,8 +40,8 @@ namespace KlotskiSolverApplication
         [DebuggerDisplay("[{tile.ToString()} {direction}]")]
         public struct TileMove
         {
-            public char tile;
             public Direction direction;
+            public char tile;
 
             public override string ToString()
             {
