@@ -220,6 +220,15 @@ namespace KlotskiSolverApplication
 
                 List<KlotskiState> children = state.getChildStates();
 
+                foreach(var childState in children)
+                {
+                    if (childState.tileMove.Equals(state.tileMove))
+                    {
+                        children.Remove(childState);
+                        children.Insert(0, childState);
+                        break;
+                    }
+                }
                 // sort the menu options to put at the top of the list any moves that are the same tile just moved
                 children.Sort(new KlotskiState.MoveCountComparer());
 
