@@ -15,6 +15,18 @@ namespace KlotskiSolverApplication
         static void Main(string[] args)
         {
             puzzlePresets.Add(new KlotskiProblemDefinition(
+                "Square Dance #18", 34, 6, 6,
+                "aab   abb   cddeefccdeffXgghiiXXghhi",
+                "    X     XX                        ",
+                "ae bf cXh dgi"));
+
+            puzzlePresets.Add(new KlotskiProblemDefinition(
+                "Forget-me-not #17", 54, 4, 5,
+                "bAAcdAAefghifghi jj ",
+                "             AA  AA ",
+                "bcdf ghij"));
+
+            puzzlePresets.Add(new KlotskiProblemDefinition(
                 "Forget-me-not", 81, 4, 5,
                 "bAAcbAAcdeefdghfi  j",
                 "             AA  AA ",
@@ -27,11 +39,7 @@ namespace KlotskiSolverApplication
                 "ebbf" +
                 "iccj" +
                 " dd ",
-                "gAAh" +
-                " AAf" +
-                " bbf" +
-                "eccj" +
-                "eidd",
+                "             AA  AA ",
                 "bcd ef ghij"));
 
             puzzlePresets.Add(new KlotskiProblemDefinition(
