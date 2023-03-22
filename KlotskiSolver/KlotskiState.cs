@@ -24,20 +24,20 @@ namespace KlotskiSolverApplication
 		// data structure
         public KlotskiProblemDefinition context { get; private set; } = null;
 		public KlotskiState parentState { get; set; } = null;
+
+        // cached list of possible next states
 		List<KlotskiState> _children = null;
 
 		// number of steps from startState
         public int depth { get; private set; } = 0;
 
-        // piece move count. this can be less than {depth} because consecutive moves of the same tile are only counted once
+        // piece move count. {moveCount} can be less than {depth} because
+        // consecutive moves of the same tile are only counted once
         public int moveCount { get; set; } = 0;
-
-        // data describing the move transforming parent state to this state
-        //public char movedTile => tileMove.tile;
+        
         public enum Direction { DOWN=1, RIGHT=2, UP=3, LEFT=4 };
-        //public Direction movedTileDirection => tileMove.direction;
 
-        [DebuggerDisplay("[{tile.ToString()} {direction}]")]
+        [DebuggerDisplay("[{tile)} {direction}]")]
         public struct TileMove
         {
             public Direction direction;
@@ -53,6 +53,7 @@ namespace KlotskiSolverApplication
             public static TileMove Empty = new TileMove { tile = '\0' };
         }
 
+        // desribes the move transforming {parentState} to this state
         public TileMove tileMove { get; private set; } = new TileMove { tile = '\0' };
 
         #region Construction
